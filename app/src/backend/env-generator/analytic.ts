@@ -167,6 +167,15 @@ export function frontAnomalyS(p: ManifestFrontParameters, longitude: number, lat
  * and the front's position are read off the same horizontal structure, so buying more of one
  * spends the other. That is the tension ADR-0044's last section is about, met here in miniature.
  */
+/*
+ * **Nothing clamps the result to the water column, and that is a bound this does not have.**
+ * `depth_m` is jittered and both feature strengths are, so a large enough coefficient could in
+ * principle place the layer above the surface or below the domain; the arithmetic would not fail,
+ * it would publish a layer nobody can sample. At the shipped 20 m/°C the layer spans 59 to 131 m
+ * against a 0–1000 m domain, which is not close — the reason no clamp is added is that a clamp
+ * would hide the configuration error rather than report it, and the honest place for that check
+ * is a bound on the *configuration*, which nothing currently has.
+ */
 export function thermoclineDepthAt(
   w: WorldParameters,
   longitude: number,

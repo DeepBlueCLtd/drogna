@@ -566,12 +566,27 @@ try {
    * can honestly be asked for: that the surface was placed, and that the caption states a measured
    * figure beside its count rather than a bare number.
    */
-  // Either branch, because either can be the honest one: the shape branch names the modal share,
-  // the level branch names the spacing it is level to within. What must never happen is a count
-  // with no measured figure beside it to say what the count means.
-  const measured = /(\d+)% of them at (\d+) m/.test(captionText) || /within one (\d+) m level/.test(captionText);
-  if (!measured)
-    throw new Error(`the caption reported a count without saying how much of the field is at it: ${captionText.slice(0, 300)}`);
+  /*
+   * **A disjunction over the caption's own two arms cannot fail, which is what this was.**
+   *
+   * It read "either branch names a measured figure" — and both arms of `Volume.tsx`'s conditional
+   * always emit one, so it was true of every state the component can produce. That is the second
+   * uncheckable assertion this block has carried, the first being the shape claim above it, and
+   * it was written while removing that one.
+   *
+   * What a picture can honestly be asked is that the number the caption prints is the number the
+   * field carries. The share map beside it draws one rect per cell of the same served grid, so
+   * the two counts have to agree; a caption that stopped counting, counted an axis, or reported a
+   * subset would not match. That is data-dependent, and it is what is asserted below.
+   */
+  const columnsInGrid = await page.evaluate(() => {
+    const svg = document.querySelector("svg.forecast-share-map");
+    return svg ? svg.querySelectorAll("rect.share-cell").length : 0;
+  });
+  if (columnsInGrid > 0 && Number(total) !== columnsInGrid)
+    throw new Error(
+      `the caption counted ${total} columns and the share map drew ${columnsInGrid} of the same served field`,
+    );
   await volume.screenshot({ path: volumeShot });
   console.log(volumeShot);
   console.log(

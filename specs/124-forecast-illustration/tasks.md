@@ -1261,12 +1261,20 @@ the part worth recording, because each was a sentence asserting a property the c
       taken rather than the one it described.
 
 - [x] T036 **Zoom and pan on the share field**, asked for after the screenshots showed the rays
-      as a smudge. The field is 96×80 against a drawn ceiling of 48, so the step was two in both
+      as a smudge. The field was 96×80 against a drawn ceiling of 48, so the step was two in both
       directions and **half the analyst's field could not be looked at at any size**: magnifying
       a thinned field shows bigger squares and not one more cell. So the view windows first and
       thins second — the cells drawn are the ones inside the rectangle, at the resolution they
-      were filed at. Measured on a live drive: whole field 48×40 of 96×80; at 1.7× it is 28×46,
-      the step falling to one and the field finally drawn as published; at 12.8×, 8×7.
+      were filed at. Measured on a live drive at the time: whole field 48×40 of 96×80; at 1.7× it
+      is 28×46, the step falling to one and the field finally drawn as published; at 12.8×, 8×7.
+
+      **Past tense, because #113 spent the horizontal on depth in this same feature.** The field
+      is 48×40 now, so it fits the 48-cell ceiling whole, the step is one everywhere and coming
+      closer gives bigger squares rather than more of them. The ordering above is unchanged and
+      is what makes that a fact about the configuration rather than about the panel — it starts
+      working again the moment the field outgrows the panel — but the apparatus has no reachable
+      effect on the shipped grid, and `ColumnProvenance`'s `MAP` note says so at the point of
+      use. The measurements in this line are what a live drive showed when the line was written.
 
       **Reused rather than rewritten.** `useMapView` already existed for the consumers' maps —
       wheel about the pointer, drag, keys, reset, clamped to the domain — and it is promoted from

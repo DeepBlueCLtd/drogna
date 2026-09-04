@@ -41,7 +41,7 @@
  * or a timer — the levels are read when the analysis changes and when a reader changes parameter,
  * which is the same rule the share map states at the head of `ColumnProvenance`.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import { COORDINATE_SYSTEM, OrbitView } from '@deck.gl/core';
 import { PathLayer, SolidPolygonLayer } from '@deck.gl/layers';
@@ -237,6 +237,14 @@ export function Volume({
    * branch now asks whether the depths most of the field is in span more than a single level:
    * inside one level the surface is a plane at this resolution, whatever the tail does.
    *
+   * **Neither branch attributes the shape, and the reason is the same for both.** The shape branch
+   * said "displaced where a feature acts on it: a warm one presses it down beneath itself" while
+   * the level branch beside it said the drawing cannot tell a displaced layer from an unsure
+   * column — and the level branch is right. Over a served analysis the distinct-depth count is
+   * four with the displacement and four without; only over the truth field does it separate the
+   * two forms, three against one. A causal sentence in one arm and its disclaimer in the other is
+   * the same claim outrunning the same evidence, reachable by a different configuration.
+   *
    * **The modal share is there because the doming is local and the caption should say so.** The
    * features that displace the layer are an eddy and a drifting feature, tens of kilometres
    * across in a domain hundreds wide (the front is deliberately not one of them —
@@ -280,14 +288,16 @@ export function Volume({
     [surface],
   );
 
-  const cellBounds = (level: ServedLevel, index: number) => {
+  // Stable, because the memo below lists it and deck.gl's `data` identity depends on it. A fresh
+  // closure per render would make that dependency a lie in the direction that costs most.
+  const cellBounds = useCallback((level: ServedLevel, index: number) => {
     const columns = level.longitudes.length;
     const longitude = level.longitudes[index % columns];
     const latitude = level.latitudes[Math.floor(index / columns)];
     const halfLon = Math.abs((level.longitudes[1] ?? longitude + 0.05) - level.longitudes[0]) / 2 || 0.02;
     const halfLat = Math.abs((level.latitudes[1] ?? latitude + 0.05) - level.latitudes[0]) / 2 || 0.02;
     return { longitude, latitude, halfLon, halfLat };
-  };
+  }, []);
 
   /*
    * **The per-level alpha is derived from how many levels there are, not typed.**
@@ -306,7 +316,28 @@ export function Volume({
   const levelAlpha =
     levels.length > 0 ? Math.max(1, Math.round(255 * (1 - STACK_TRANSMITTANCE ** (1 / levels.length)))) : 46;
 
-  const layers = [
+  /*
+   * **Memoised, because `data` identity is deck.gl's full-invalidation trigger.**
+   *
+   * This array was built in the component body. Every one of the three `data:` expressions below
+   * allocates fresh objects, so every React render handed all 28 layers new `data` references and
+   * deck.gl re-ran `getPolygon` — four `frame.toCartesian` calls each — and `getFillColor` over
+   * every datum. On the shipped 48 x 40 x 26 that is 49,920 level objects, 1,920 picker objects
+   * and up to 1,920 surface objects re-allocated, and roughly 215,000 projections, per render.
+   *
+   * And renders are cheap to cause. `ColumnProvenance` sets the cursor from `onMouseEnter` on
+   * each of up to 1,920 share-map cells, and this component is not memoised, so crossing one cell
+   * with the pointer rebuilt the whole stack. It did not even need a pointer: `ForecastPanel`
+   * re-renders on every forecast indicator, which the monitor publishes beside every scored
+   * residual — so with the volume open the rebuild ran at observation cadence, at whatever the
+   * clock rate is.
+   *
+   * Nothing caught it. `capture:forecast` opens the volume, shoots it and never moves the
+   * pointer; jsdom has no WebGL, so `volume-panel.test.tsx` says outright that deck.gl is not
+   * exercised. Every other derived value in this file was already memoised, which is what makes
+   * this one an omission rather than a decision.
+   */
+  const layers = useMemo(() => [
     // The field, level by level, semi-transparent so the surface through it can be seen. Every
     // level drawn is a level the store answered for.
     ...levels.map((level) =>
@@ -426,7 +457,9 @@ export function Volume({
           getFillColor: [0, 0, 0, 0] as [number, number, number, number],
         })
       : undefined,
-  ].filter((layer) => layer !== undefined);
+    ].filter((layer) => layer !== undefined),
+    [levels, surface, first, span, frame, grid, column, levelAlpha, strongest, cellBounds],
+  );
 
   return (
     <div className="forecast-volume" data-testid="forecast-volume">
@@ -475,7 +508,7 @@ export function Volume({
             ? '. No column in this field falls with depth anywhere, so there is no thermocline to place — which is a different fact from one at depth nought, and is why none is drawn rather than a surface at the top of the box.'
             : relief.coreSpanM <= relief.spacingM
               ? ` — so it is level to within one ${relief.spacingM} m level across most of the field. What this shows is where each column's strongest gradient sits, which is a sonar question whatever its shape; where a column differs from its neighbours this cannot say whether a feature moved the layer there or the analysis is simply less sure of that column.`
-              : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. The layer is level across most of the field and displaced where a feature acts on it: a warm one presses it down beneath itself, a cool one lets it rise. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
+              : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. What this shows is where each column's strongest gradient sits; where a column differs from its neighbours it cannot say whether a feature moved the layer there or the analysis is simply less sure of that column. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
         </p>
       )}
     </div>

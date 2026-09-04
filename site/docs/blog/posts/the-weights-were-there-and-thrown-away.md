@@ -57,8 +57,8 @@ contribution, its separation from the cell in kilometres and in depth, its own d
 the forecast's at that cell.](../assets/124-what-a-number-is-made-of.png)
 
 Pick a square. The lines are the instruments that reached that column, each as wide as it
-counted; pick a depth and they re-weight without moving. Every figure is printed too, because a
-loitering platform stacks its sources. Here six contribute 3.86 and the band beyond reach −0.07,
-against a weight of 3.79 — the gain extrapolating, drawn at magnitude.
+counted; pick a depth and they re-weight without moving. Every figure is printed too: a platform
+crossing its own cells stacks its sources. Here six contribute 3.86 and the band beyond reach
+−0.07, against ω = 3.79 — the gain extrapolating, at magnitude.
 
 [Open it at the Forecast tab](../../instances/main/#/view/forecast)

@@ -927,6 +927,51 @@ the part worth recording, because each was a sentence asserting a property the c
       second view of one proof — `capture:glance` already takes one — would have made an honest
       record red. Counted distinct now, with a fixture.
 
+- [x] T022v **An eleventh round, and the last: the findings are now mostly about the round before
+      them, and one of them was a line added an hour earlier.**
+
+      **The busy line added in T022u threw out of render.** It read
+      `grid.depthsM[depthIndex].toFixed(0)` with no guard, in the same round that added the effect
+      resetting that index — effects run *after* the render that already read it, so a grid with
+      fewer levels unwinds the panel. Every other consumer goes through `depthM` and checks it;
+      this one line did not.
+
+      **Every new cycle read the whole field twice**, measured: the analysis lands first and the
+      depth axis a round trip later, and the axis was a fresh object literal, so the slab effect
+      fired on the analysis and again on the object's new identity — two byte-identical full-grid
+      area queries a cycle, one discarded, under a header saying "never twice for one cycle". The
+      restatement test could not see it because it stops short of a boundary by design. The grid is
+      handed back unchanged where the axis has not moved, and a second test crosses a boundary.
+
+      **"Reopening the view asks again" was a remedy the shell does not offer.** Every view is
+      mounted and switching only changes which is shown, so the sentence sent a reader to do
+      something that changes nothing.
+
+      **`check-capture-inventory` was narrow twice more.** Anchored on `run:` it could not see a
+      multi-line `run: |` block or `pnpm -C app run capture:x` — both ordinary YAML, both adding a
+      proof the record does not name while the gate reported clean. Anchored on `pnpm` and reading
+      to the end of the line now, with a fixture for the block form.
+
+      **`reachedCount` counted served indices**, so a document naming source 9 in a six-source
+      table — which the master permits, bounding the index only below — printed "7 of this column's
+      6 sources reached it". Counted over the rays now.
+
+      **A field in which no share name resolved was drawn as a field of zeros**, and in the default
+      mode as the archive at −∞: the shell asserting a provenance for a cell nothing was served
+      for. `shares.ts` already states that rule for the profile; the map above it did not follow it.
+
+      **And the blog body still explained the picture by the wrong scenario.** T022u corrected the
+      alt text and left the identical claim one paragraph down — the verification checked that a
+      string had been replaced rather than that the *claim* was gone from the file. It is checked
+      the second way now.
+
+      **One thing is recorded as unheld rather than covered.** The axis retry has two halves; the
+      allowance half is tested and the once-per-cycle half is not. Three spellings of a bound were
+      tried and all three passed with the mechanism removed — the panel is announced too few
+      analyses over a window a test can afford to drive. A fourth spelling would be an assertion
+      that looks like coverage and is not, which is what this feature has spent ten rounds
+      removing. It is said in the test and in the pull request instead.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath

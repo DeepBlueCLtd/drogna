@@ -394,6 +394,16 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
     ]);
 
+    // **Every form of the command, not the one the workflow happens to use.** Anchored on `run:`
+    // the pattern could not see a multi-line `run: |` block (`|` is not whitespace) nor
+    // `pnpm -C app run capture:x` (`-C app` sits between `pnpm` and `run`) — both ordinary YAML,
+    // both adding a proof the record does not name while the gate reported clean.
+    expect(captureInventory(join(fixtures, 'capture-block')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/CI runs capture:widgets and this list does not name it/),
+      expect.stringMatching(/says CI runs three more things.*it runs 4/),
+      expect.stringMatching(/says two capture proofs; CI runs 3/),
+    ]);
+
     // **One proof run at two views is one proof.** The record names commands and the workflow
     // runs steps; counting steps made an honest record red — seven names against eight steps,
     // fixable only by writing "eight" over a list of seven. `capture:glance` already takes a view

@@ -98,6 +98,24 @@ export function spendAttempt(spent: number, outcome: 'answered' | 'absent' | 're
   return outcome === 'refused' ? spent + 1 : spent;
 }
 
+/**
+ * Whether two depth axes are the same axis, so the region can keep the object it already has.
+ *
+ * By value, because the grid is rebuilt from the holding's manifest on every cycle and a fresh
+ * object literal is a fresh dependency for anything keyed on it.
+ */
+function sameGrid(standing: ColumnGrid | undefined, fresh: ColumnGrid): boolean {
+  if (!standing) return false;
+  return (
+    standing.depthsM.length === fresh.depthsM.length &&
+    standing.depthsM.every((depth, index) => depth === fresh.depthsM[index]) &&
+    standing.minimumLongitude === fresh.minimumLongitude &&
+    standing.maximumLongitude === fresh.maximumLongitude &&
+    standing.minimumLatitude === fresh.minimumLatitude &&
+    standing.maximumLatitude === fresh.maximumLatitude
+  );
+}
+
 export const FORECAST_REGIONS = [
   { id: 'indicator', label: 'why a run is warranted, and what one costs', element: '[data-region="indicator"]' },
   { id: 'volume', label: 'what a cell’s value was made from', element: '[data-region="volume"]' },
@@ -481,9 +499,15 @@ export function ForecastPanel({ params }: PanelProps) {
           return;
         }
         gridForRef.current = named;
-        attemptsRef.current = spendAttempt(attemptsRef.current, 'answered');
+        attemptsRef.current = 0;
         setGridGaveUp(false);
-        setColumnGrid(grid);
+        // **The same object where the axis is the same, because the identity is a dependency.**
+        // `columnGridOf` returns a fresh literal, and `ColumnProvenance`'s slab effect depends on
+        // it — so a new cycle fired the area query once on the analysis and again, one round trip
+        // later, on this object's new identity: two byte-identical full-grid queries a cycle, one
+        // discarded, under a header saying "never twice for one cycle". A cycle that spans the
+        // same depths hands back the object already in hand.
+        setColumnGrid((standing) => (sameGrid(standing, grid) ? standing : grid));
       } catch {
         // Left for the next restatement to ask again, within the allowance above; a chooser over
         // no axis is drawn as absent. Cancelled reads spend nothing, as above.

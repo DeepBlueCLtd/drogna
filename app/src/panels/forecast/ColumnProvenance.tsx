@@ -30,9 +30,15 @@
  * **Nothing here polls** (FR-136), and that is a narrower claim than "nothing is fetched".
  * A fetch happens when a reader picks a depth or a cell, and **once when a new analysis cycle is
  * announced** — the field is re-read because it is a different field, and the axis because it
- * belongs to that analysis. Never on a tick, never on a timer, and never twice for one cycle: a
- * *restatement* of the standing analysis carries the same collection names and is keyed out, which
- * is what `FR-136: a restatement of the standing analysis re-queries nothing` holds.
+ * belongs to that analysis. Never on a tick, never on a timer, and never twice for one cycle.
+ *
+ * That last clause was false when it was written, and measured so: the analysis lands first and
+ * the *grid* one round trip later, and the grid was a fresh object literal each cycle, so the slab
+ * effect fired on the analysis and again on the grid's new identity — two byte-identical
+ * full-grid area queries per cycle, one thrown away. `gridForAnalysis` memoises on the axis's own
+ * values now, so a cycle that spans the same depths hands back the same object and the second
+ * fetch does not happen. `FR-136` holds the restatement case; `FR-136: a new cycle re-reads the
+ * field once` holds this one.
  *
  * This paragraph read "not on an announcement" while both effects were announcement-driven, which
  * is the sentence a reader would have audited the region against.
@@ -300,7 +306,22 @@ export function ColumnProvenance({
           // two copies of a refusal rule that have to agree — the fault class this file's own
           // comments name repeatedly.
           const read = sharesFrom<number[]>(body, (values) => values, []);
-          if (read.collided.length > 0) {
+          // **A field in which nothing resolved is a refusal, not a field of zeros.** `sharesFrom`
+          // returns the absent reading for a share whose served name it did not recognise, and
+          // with *no* name recognised the map drew every cell at `fillOpacity 0` — a uniformly
+          // empty field indistinguishable from "this share is nought everywhere" — while in the
+          // default `dominant` mode `dominantAt` returned `archive` at `-Infinity`, so each cell
+          // drew as the archive, hatched, with the negative class: the shell asserting a
+          // provenance for a cell nothing was served for. `shares.ts` already states this rule for
+          // the profile ("a non-number treated as a zero is exactly the reading FR-041 forbids");
+          // the map above it did not follow it.
+          const resolved = SOURCES.filter((source) => read.shares[source.key].length > 0);
+          if (resolved.length === 0) {
+            setSlabRefusals([
+              `the share field at ${depthM} m carried no share this shell recognises: ${Object.keys(body.ranges ?? {}).join(', ') || 'no ranges at all'}`,
+            ]);
+            setSlab(undefined);
+          } else if (read.collided.length > 0) {
             setSlabRefusals([`the share field at ${depthM} m is ambiguous: ${read.collided.join('; ')}`]);
             setSlab(undefined);
           } else {
@@ -559,7 +580,7 @@ export function ColumnProvenance({
           {!analysis
             ? 'no analysis has been announced yet, so there is no provenance to read. This region answers from the analysis cycle’s own published field rather than from a store the shell reaches into privately, and it waits for one to exist rather than drawing a field that would resolve to nothing.'
             : gridGaveUp
-              ? 'an analysis has been announced, but the grid it spans could not be read: it comes from a holding’s own manifest, the store was asked for it several times over, and this console has stopped asking. Reopening the view asks again.'
+              ? 'an analysis has been announced, but the grid it spans could not be read: it comes from a holding’s own manifest, the store was asked for it several times over, and this console has stopped asking. Reloading the page starts a new run and asks again; switching views does not, because every view stays mounted.'
               : 'an analysis has been announced, but the grid it spans is not known yet: it is read from a holding’s own manifest, and the store had none when this console asked.'}
         </p>
         {stillToCome}
@@ -633,7 +654,13 @@ export function ColumnProvenance({
           above records as a shipped fault. */}
       {busy && (
         <p className="forecast-column-busy">
-          reading the share field{slab ? ` at ${grid.depthsM[depthIndex].toFixed(0)} m; the map below is still ${slab.depthM.toFixed(0)} m` : ''}…
+          reading the share field
+          {/* `depthM`, not `grid.depthsM[depthIndex]`. The index can be past the end of a grid
+              that has just shrunk — the reset effect runs *after* the render that already read it
+              — and this line, added in the round that also added the reset, was the one place
+              that read it without a guard: `undefined.toFixed` throws out of render and unwinds
+              the panel. Every other consumer goes through `depthM` and checks it. */}
+          {slab && depthM !== undefined ? ` at ${depthM.toFixed(0)} m; the map below is still ${slab.depthM.toFixed(0)} m` : ''}…
         </p>
       )}
 

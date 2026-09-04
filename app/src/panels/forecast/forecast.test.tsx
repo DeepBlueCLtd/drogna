@@ -848,6 +848,16 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         await Promise.resolve();
       });
       expect(empties, 'the axis was never asked for while the store was empty').toBeGreaterThan(0);
+      // **What this test does NOT hold, said rather than papered over.** The fix has two halves:
+      // an honest "not in the inventory yet" must not spend the allowance (asserted below, by the
+      // recovery), and it must be asked once per *cycle* rather than once per restatement
+      // (`askedForRef`). Three spellings of a bound on `empties` were tried here and all three
+      // passed with `askedForRef` removed — the panel is announced too few analyses over a window
+      // this test can afford to drive, so the per-restatement refetch never gets big enough to
+      // cross any bound derived from the run. A fourth spelling would be an assertion that looks
+      // like coverage and is not, which is what this feature has spent nine review rounds
+      // removing. The half that IS held is below; the other half is unheld and recorded as such in
+      // the pull request.
 
       // Now the store answers again. If a not-yet answer had spent the allowance, the region has
       // stopped asking and the field never comes back.
@@ -862,6 +872,41 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         document.querySelectorAll('rect.share-cell').length,
         'the region stopped asking for an axis it had only not been given yet',
       ).toBeGreaterThan(0);
+    });
+
+    it('FR-136: a new cycle re-reads the field once, not twice', async () => {
+      // **The half the restatement test cannot see.** It deliberately stops short of a cycle
+      // boundary, so it measures the restatement case only. Across a boundary the analysis lands
+      // first and the depth axis one round trip later, and the axis was a fresh object literal
+      // every cycle — so the slab effect fired on the analysis and again on the grid's new
+      // identity: two byte-identical full-grid area queries a cycle, one discarded, under a
+      // header saying "never twice for one cycle".
+      await toAField();
+      const areasBefore = fetched.filter((url) => url.includes('/area?')).length;
+      const cyclesBefore = new Set(
+        fetched.filter((url) => url.includes('/area?')).map((url) => /collections\/([^/]+)/.exec(url)?.[1]),
+      ).size;
+      await act(async () => {
+        for (let i = 0; i < config.scheduler.max_interval_ticks * 2; i++) runtime.clock.tickOnce();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const areas = fetched.filter((url) => url.includes('/area?'));
+      const collections = [...new Set(areas.map((url) => /collections\/([^/]+)/.exec(url)?.[1]))];
+      expect(collections.length, 'no new cycle was announced, so nothing was measured').toBeGreaterThan(
+        cyclesBefore,
+      );
+      // One query per collection, at one depth: the reader changed no depth, so any second read of
+      // a collection is the region asking twice for one cycle.
+      for (const collection of collections) {
+        const forThis = areas.filter((url) => url.includes(`collections/${collection}/`));
+        expect(new Set(forThis).size, `${collection} was queried ${new Set(forThis).size} times for one cycle`).toBe(1);
+      }
+      expect(areas.length - areasBefore, 'more area queries than cycles announced').toBeLessThanOrEqual(
+        collections.length - cyclesBefore,
+      );
     });
 
     it('FR-136: a restatement of the standing analysis re-queries nothing', async () => {

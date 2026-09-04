@@ -45,8 +45,23 @@ const WORKFLOW = join('.github', 'workflows', 'ci.yml');
  * `capture:consumers`: a step running a script that does not exist passed both the name check and
  * the count. A gate whose own pattern is narrower than the thing it holds is the trap this gate
  * was written about, one level down.
+ *
+ * **And it stayed narrower twice.** Anchored on `run:` it could not see a step written as a
+ * multi-line block —
+ *
+ * ```yaml
+ * run: |
+ *   pnpm run capture:alpha
+ *   pnpm run capture:beta
+ * ```
+ *
+ * — because `|` is not whitespace, nor `pnpm -C app run capture:gamma`, because `-C app` sits
+ * between `pnpm` and `run`. Both are ordinary YAML and both would have added a proof the record
+ * does not name while the gate reported clean. Anchored on `pnpm` and reading to the end of the
+ * line, it sees every form of the command rather than the one form the workflow happens to use
+ * today.
  */
-const CI_STEP = /run:\s*pnpm\s+(?:run\s+)?(capture:[a-z0-9:_-]+)/g;
+const CI_STEP = /\bpnpm\b[^\n]*?\b(capture:[a-z0-9:_-]+)/g;
 /** The backticked command names inside the sentence that lists them. */
 const NAMED = /`(capture:[a-z0-9:_-]+?)(?:\s[^`]*)?`/g;
 /** "seven capture proofs", so the prose count is held to the list beside it. */

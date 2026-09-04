@@ -257,7 +257,12 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
     remainder,
     observationWeight,
     widest,
-    reachedCount: summed.size,
+    // **Counted over the rays, not over the served indices.** It was `summed.size`, a map keyed
+    // on `entry.source` — and the master bounds that index only below (`minimum: 0`), so a
+    // document naming source 9 in a six-source table validates. The count then read "7 of this
+    // column's 6 sources reached it", a number larger than its own denominator, with that
+    // contribution absent from the stack and from the sum and nothing saying so.
+    reachedCount: rays.filter((ray) => ray.reachedHere).length,
     noSuchLevel,
   };
 }

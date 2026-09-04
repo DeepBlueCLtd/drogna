@@ -473,3 +473,26 @@ describe('a depth the document does not carry', () => {
     expect(raysFor(carried).noSuchLevel).toBe(false);
   });
 });
+
+describe('a served index the source table does not carry', () => {
+  it('never makes the reached count exceed the sources it is counted against', () => {
+    // The master bounds `contributions[].source` only below (`minimum: 0`), so a document naming
+    // source 9 in a six-source table validates and the shell cannot refuse it. Counted over the
+    // served indices — `summed.size` — the caption read "7 of this column's 6 sources reached it":
+    // a count larger than its own denominator, with that contribution absent from the stack and
+    // from the sum, and nothing saying so.
+    const stray = document();
+    stray.levels = [
+      {
+        ...stray.levels[0],
+        contributions: [
+          ...stray.levels[0].contributions,
+          { source: 9, contribution: 0.4, separation: { horizontal_km: 1, vertical_m: 0 } },
+        ],
+      },
+    ];
+    const set = raysFor(stray);
+    expect(set.reachedCount).toBeLessThanOrEqual(set.rays.length);
+    expect(set.reachedCount).toBe(3);
+  });
+});

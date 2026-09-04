@@ -365,7 +365,30 @@
 .forecast-column-caption,
 .forecast-column-basis,
 .forecast-column-where,
-.forecast-column-busy {
+/* A control that cannot act says so, rather than looking like one that can and doing nothing. */
+.forecast-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.forecast-column-zoom {
+  align-self: center;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-share-map {
+  /* The map is grabbable, and says so before it is grabbed. */
+  cursor: grab;
+  touch-action: none;
+}
+
+.forecast-share-map.is-panning {
+  cursor: grabbing;
+}
+
+.forecast-column-busy,
+.forecast-column-stale {
   margin: 0;
   font-size: 0.8em;
   color: var(--shell-dim);
@@ -565,4 +588,204 @@
   margin: 0;
   font-size: 0.8em;
   color: var(--shell-dim);
+}
+
+/* --------------------------------------------- the rays, and the source profile --- */
+
+/* The rays sit over the field and take no pointer events, so the cell beneath a ray is still
+   the cell a click selects. Their width is set per ray from the arithmetic; nothing here may
+   set one, or the picture would stop being proportional to the contribution. */
+.forecast-ray {
+  opacity: 0.85;
+}
+
+/* What the width scale could not carry, stated under the map it could not be carried on. */
+.forecast-ray-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: var(--shell-dim);
+}
+
+/* A negative contribution is drawn at its magnitude, never floored to zero: where a cell's
+   background error greatly exceeds the observed cell's the gain extrapolates and the weight
+   passes one, which is optimal interpolation behaving correctly.
+
+   This comment used to read "The dash is the mark", and that was never true — the dash belongs
+   to the instrument and is the same for that source's positive and negative rays, deliberately,
+   so that two sources stay tellable apart. On the map a negative ray is at full opacity against
+   0.85; **the sign itself is carried by the table beneath**, which prints it, and that is the
+   honest statement of what the picture does and does not carry. */
+.forecast-ray.is-negative {
+  opacity: 1;
+}
+
+/* A ray at the width floor: its thickness is the map's limit, not its contribution. Dimmed so it
+   does not read as a peer of the rays whose width means something, and named in a sentence under
+   the map — a mark alone would be one more thing to decode. */
+.forecast-ray.is-under-scale {
+  /* Dimmed, but not so far that a one-pixel line stops being a line: the floor exists because a
+     sub-pixel stroke renders as nothing, and 0.6 of a hairline was most of the way back to it. */
+  opacity: 0.8;
+}
+
+/* Screen units, because the marker now carries `vector-effect: non-scaling-stroke` like the rays
+   do. Without it the map's `preserveAspectRatio="none"` stretched the ring's stroke by a
+   different factor along each axis, so a marker's outline thickness depended on nothing but the
+   map's shape. The numbers changed with the units: 0.08 user units was about 0.7 px at the sizes
+   this draws at, which is what these now say directly. */
+.forecast-ray-origin {
+  stroke: var(--shell-bg);
+  stroke-width: 0.7;
+}
+
+/* Where the rays converge: the column that was picked. Hollow, so the cell's own share colour
+   still reads through it. */
+/* Screen units, because the ring carries `vector-effect: non-scaling-stroke` — see the comment
+   on the element. In user units, under `preserveAspectRatio="none"`, this was ~2 px across and
+   ~0.57 px top-to-bottom on the shipped field. */
+.forecast-ray-column {
+  fill: none;
+  stroke: var(--shell-fg);
+  stroke-width: 1.4;
+}
+
+.forecast-column-level {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0.15em 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.forecast-column-level:hover .forecast-column-stack,
+.forecast-column-level:focus-visible .forecast-column-stack {
+  outline: 1px solid var(--shell-fg);
+  outline-offset: 2px;
+}
+
+.forecast-column-levels > li.is-selected {
+  border-top-color: var(--shell-fg);
+}
+
+.forecast-column-levels > li.is-selected .forecast-column-depth {
+  font-weight: 700;
+}
+
+/* The four kinds of band carry a shape as well as a colour: the background's three are plain,
+   what earlier cycles left is dimmed, this cycle's sources are solid at full strength, and
+   the remainder is the one band that is not a place. Colour is never the only carrier. */
+.forecast-column-segment.is-earlier {
+  opacity: 0.55;
+}
+
+.forecast-column-segment.is-remainder {
+  opacity: 0.7;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.45) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+.forecast-column-segment.is-negative {
+  outline: 1px dashed var(--shell-fg);
+  outline-offset: -1px;
+}
+
+.forecast-column-selected {
+  margin: 0.3em 0;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-column-absent {
+  margin: 0;
+  font-size: 0.78em;
+  color: var(--shell-dim);
+  font-style: italic;
+}
+
+.forecast-column-sum {
+  color: var(--shell-fg);
+}
+
+.forecast-column-kind {
+  color: var(--shell-dim);
+  font-weight: 400;
+}
+
+/* The two numbers behind every width (FR-130), as a table because they are a table: five
+   columns of figures a reader compares down rather than across. It scrolls inside its own box
+   at a phone's width rather than pushing the page sideways. */
+.forecast-column-numbers {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  margin: 0.6em 0 0;
+  border-collapse: collapse;
+  font-size: 0.78em;
+  font-family: monospace;
+  color: var(--shell-dim);
+}
+
+.forecast-column-numbers caption {
+  text-align: left;
+  font-family: system-ui, sans-serif;
+  padding-bottom: 0.4em;
+  color: var(--shell-dim);
+}
+
+.forecast-column-numbers th,
+.forecast-column-numbers td {
+  text-align: left;
+  padding: 0.15em 0.7em 0.15em 0;
+  white-space: nowrap;
+  border-bottom: 1px solid #232c36;
+}
+
+.forecast-column-numbers th[scope='row'] {
+  color: var(--shell-fg);
+  font-weight: 400;
+}
+
+.forecast-column-numbers .is-negative {
+  color: var(--shell-fg);
+  font-weight: 700;
+}
+
+/* A source that reached nothing at the chosen level has no width to draw, so there is no stroke
+   here to style: `drawnWidthOf` returns 0 for it and the rule that used to sit here dimmed
+   whatever remained of the line's cap, which is nothing. What keeps such a source's place is its
+   origin marker, below, and that is where the styling for it lives. */
+/* A source that reached nothing at the chosen level has no width to draw — its contribution is
+   nought, which is the bottom of the same scale — so what keeps its place is a hollow origin
+   marker. A filled marker means "this source contributed here"; a hollow one means "this source
+   is part of this column and contributed nothing at this level".
+
+   **The stroke is deliberately not set here, and that is the whole of a fault this had.** The
+   rule above paints every marker's outline in `--shell-bg` so a filled one reads against a
+   coloured cell. A hollow marker has no fill, so that outline was its only paint — a
+   background-coloured ring on the background, invisible — while the component passed the
+   instrument's hue as an SVG presentation attribute, which sits below any class selector and
+   lost every time. The hue now arrives as an inline style, which wins; setting a stroke here
+   would take it back. */
+.forecast-ray-origin.is-absent {
+  opacity: 0.7;
+  stroke-width: 1.2;
+}
+
+/* A cell with no readable share is drawn as the ground it sits on. It used to draw as the first
+   share, hatched, with the negative class, because the strongest-share search seeded at -Infinity
+   and returned that when nothing was finite — the shell asserting a provenance for a cell nothing
+   was served for. Marked so the cursor and the keyboard still reach it. */
+.share-cell.is-unserved {
+  stroke: var(--shell-dim);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.1 0.1;
 }

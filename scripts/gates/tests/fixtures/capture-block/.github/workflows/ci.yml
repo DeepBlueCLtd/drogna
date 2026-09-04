@@ -1,0 +1,9 @@
+jobs:
+  checks:
+    steps:
+      - name: Two proofs in one block
+        run: |
+          pnpm run capture:glance operator
+          pnpm run capture:map
+      - name: A scoped one the record does not name
+        run: pnpm -C app run capture:widgets

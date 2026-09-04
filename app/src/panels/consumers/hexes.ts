@@ -17,7 +17,7 @@
  * to freeze the page.
  */
 import { cellToBoundary, cellToLatLng, getHexagonAreaAvg, latLngToCell, polygonToCells } from 'h3-js';
-import type { ViewRect } from './view.js';
+import type { ViewRect } from '../map-view.js';
 
 export interface HexCell {
   readonly index: string;

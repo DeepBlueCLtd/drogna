@@ -278,7 +278,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "depth_m"
             ],
             "additionalProperties": false,
-            "description": "The cell the source's observations were attributed to, and its centre: where the ray is drawn from.",
+            "description": "The cell the source's observations were attributed to, and its centre: what the taper was evaluated on, and what the stated separation is measured between. NOT where the ray is drawn from — this said that, and the shell draws from `observed`, deliberately: a reader asking where a number came from means the water, not the bookkeeping. The two are within half a cell of each other and the difference is stated on the surface rather than hidden.",
             "properties": {
               "index": {
                 "type": "integer",

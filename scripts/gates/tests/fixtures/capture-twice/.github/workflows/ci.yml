@@ -1,0 +1,9 @@
+jobs:
+  checks:
+    steps:
+      - name: Glance, operator
+        run: pnpm run capture:glance operator
+      - name: Glance, consumers
+        run: pnpm run capture:glance consumers
+      - name: Map
+        run: pnpm run capture:map

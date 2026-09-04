@@ -1,0 +1,1 @@
+{ "scripts": { "capture:glance": "tsx a.ts", "capture:map": "tsx b.ts" } }

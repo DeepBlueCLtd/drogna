@@ -57,7 +57,7 @@ import { displayInstant } from '../../shell/display.js';
 import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
 import { forecastTour } from '../../shell/walkthrough/tour.js';
 import { FeatureTracks } from './FeatureTracks.js';
-import { ColumnProvenance, columnGridOf, type ColumnGrid } from './ColumnProvenance.js';
+import { ColumnProvenance, columnGridOf, type ColumnGrid, type StandingAnalysis } from './ColumnProvenance.js';
 import './forecast.css';
 
 /**
@@ -66,12 +66,144 @@ import './forecast.css';
  * The two feature 124 will fill are listed here already: they are regions of this view now,
  * and what they say is part of what the view says.
  */
+/** How many failed inventory fetches the depth axis is retried over before the region gives up. */
+export const GRID_ATTEMPTS = 3;
+
+/**
+ * What one attempt at the depth axis costs, by what came back.
+ *
+ * A function rather than three `+= 1`s in an effect, because the *policy* is the thing that was
+ * wrong twice and neither version could be reached by a test: the panel asks for the axis only
+ * when a new analysis cycle lands, and on the shipped configuration that is rarer than the window
+ * a reasonable test can drive.
+ *
+ * - `'answered'` — the axis is in hand. The allowance resets: a seam that answers once is not the
+ *   seam the allowance is for.
+ * - `'absent'` — the inventory answered, and honestly, and does not carry this cycle's holding
+ *   yet. **Spends nothing.** It used to spend one, and enough of those in a row silenced the
+ *   region for the life of the panel however many later cycles would have answered — which is the
+ *   fault the deleted holdings subscription existed against, in a smaller shape.
+ * - `'refused'` — a non-2xx, a body that fails its master, or a throw. This is what the allowance
+ *   is for, and the only thing that spends it.
+ *
+ * A *cancelled* attempt is not an outcome at all and is deliberately absent from this list. React
+ * runs the previous effect's cleanup before the next body, so a restatement arriving mid-fetch
+ * discards that result — counting the attempt before the request made that cost one, and three
+ * fast restatements then disabled the region. A restatement is 60 ticks, which is about 60 ms of
+ * real time at the configured `max_rate`, and `capture:forecast` drives at exactly that right
+ * after a breakpoint crossing has remounted the panel.
+ */
+export function spendAttempt(spent: number, outcome: 'answered' | 'absent' | 'refused'): number {
+  if (outcome === 'answered') return 0;
+  return outcome === 'refused' ? spent + 1 : spent;
+}
+
+/**
+ * Whether two depth axes are the same axis, so the region can keep the object it already has.
+ *
+ * By value, because the grid is rebuilt from the holding's manifest on every cycle and a fresh
+ * object literal is a fresh dependency for anything keyed on it.
+ *
+ * **Exported for the test that walks `ColumnGrid`'s own keys.** Hand-written field equality is
+ * complete only against the shape it was written for: it names five members and `ColumnGrid` has
+ * five, and nothing would fail if a sixth arrived. The failure would be silent and would look
+ * like a fix — either the duplicate full-grid area query per cycle coming back, or a stale grid
+ * held across a genuine axis change — so the test perturbs every key the type actually carries
+ * rather than the five this function happens to know about.
+ */
+export function sameGrid(standing: ColumnGrid | undefined, fresh: ColumnGrid): boolean {
+  if (!standing) return false;
+  return (
+    standing.depthsM.length === fresh.depthsM.length &&
+    standing.depthsM.every((depth, index) => depth === fresh.depthsM[index]) &&
+    standing.minimumLongitude === fresh.minimumLongitude &&
+    standing.maximumLongitude === fresh.maximumLongitude &&
+    standing.minimumLatitude === fresh.minimumLatitude &&
+    standing.maximumLatitude === fresh.maximumLatitude
+  );
+}
+
 export const FORECAST_REGIONS = [
   { id: 'indicator', label: 'why a run is warranted, and what one costs', element: '[data-region="indicator"]' },
   { id: 'volume', label: 'what a cell’s value was made from', element: '[data-region="volume"]' },
   { id: 'ahead', label: 'the spread ahead', element: '[data-region="ahead"]' },
   { id: 'timeline', label: 'the runs, in simulation time, labelled by cause', element: '[data-region="timeline"]' },
 ] as const;
+
+
+/**
+ * The depth axis the centre region walks, taken from the **analysis** the region is reading and
+ * not from whichever holding the inventory happens to list first.
+ *
+ * **"Every era shares the one grid" is false, and the depth axis is where.** The shipped
+ * configuration authors the archive over four levels and the now-cast, the departure brief and
+ * every analysis over six (`config.env_generator`), so the first holding in the inventory — the
+ * archive — offered 0, 333, 667 and 1000 m for a column whose analysis is filed at 0, 200, 400,
+ * 600, 800 and 1000. While the region drew four aggregate shares that was wrong but survivable:
+ * each depth was queried by value and EDR snapped it to the nearest level, so a reader saw the
+ * right numbers under a rounded label. Feature 124 made the row's position an *index into
+ * another document*, and it stopped being survivable: the row labelled 333 m carried the 400 m
+ * level's background against the 200 m level's contributions, and the analysis's 800 m level was
+ * never shown at all.
+ *
+ * So the axis comes from the holding the analysis names. Where that holding is not in the
+ * inventory yet the chooser stays undrawn, which is the honest state — a chooser over the wrong
+ * axis is worse than no chooser.
+ */
+function gridForAnalysis(inventory: HoldingsInventory, analysis: StandingAnalysis | undefined): ColumnGrid | undefined {
+  if (!analysis) return undefined;
+  const named = inventory.holdings.find((holding) => holding.holding_id === analysis.collections.analysis);
+  return columnGridOf(named as CoverageHolding | undefined);
+}
+
+/**
+ * The analysis this console should read, taken from the store's own inventory, for a console
+ * that was not listening when the last one was published.
+ *
+ * **The gap this closes, which a reader met as a region that never filled.** The centre region
+ * reads `analysis_standing`, and the analyst publishes that by restating what it holds *in
+ * memory* — `restateLastAnalysis` returns immediately when it has nothing. A start condition
+ * restores the coverage store and not the analyst's memory, so on a snapshot-seeded visit the
+ * analyst has no standing analysis to restate: the store holds the pre-roll's analyses, the query
+ * layer will serve them, and the region says "no analysis has been announced yet" for the whole
+ * visit — until a *new* analysis happens, which needs a breach or the cadence floor. Reported
+ * from a running instance sitting at that sentence with three analyses in the store.
+ *
+ * It is the fault feature 125 was written for, one component further on. `backend/lib/standing-run.ts`
+ * names the four components that "hold nothing but what it told them" and lists the analyst among
+ * them; the scheduler, telemetry, the model runner and the offload packager each adopt from the
+ * store now, and the analyst does not — its file carries no reference to that module.
+ *
+ * **Read here rather than announced there, and that is the honest half of the fix.** An
+ * `AnalysisPublished` carries `observations` — how many were assimilated, how many clamped, the
+ * worst displacement — which are facts about a cycle that ran and are on no descriptor. An
+ * analyst reconstructing its own announcement would have to invent them, which is exactly the
+ * thing ADR-0041 forbids: a snapshot source composing an announcement no component ever made. The
+ * region does not need them. It needs three collection names, so three collection names are what
+ * this recovers, and the surface says it read them rather than heard them.
+ *
+ * The sibling collections are required to be present, not merely named: the ids follow the
+ * analyst's own convention (`spreadHoldingIdFor` reads the run's spread the same way), and a base
+ * holding whose provenance or contributions has not landed means the store is mid-publication
+ * rather than standing on something — the rule `standingPair` applies to a run.
+ */
+export function standingAnalysisIn(inventory: HoldingsInventory): StandingAnalysis | undefined {
+  const held = new Set(inventory.holdings.map((holding) => holding.holding_id));
+  let best: { id: string; tick: number } | undefined;
+  for (const holding of inventory.holdings) {
+    if (holding.era !== 'analysis') continue;
+    // The base holding of a cycle, not one of its three siblings.
+    const id = holding.holding_id;
+    if (/-(error|provenance|contributions)$/.test(id)) continue;
+    if (!held.has(`${id}-provenance`) || !held.has(`${id}-contributions`)) continue;
+    if (!best || holding.published_at.tick > best.tick) best = { id, tick: holding.published_at.tick };
+  }
+  if (!best) return undefined;
+  return {
+    collections: { analysis: best.id, provenance: `${best.id}-provenance`, contributions: `${best.id}-contributions` },
+    heard: false,
+  };
+}
 
 /**
  * A short, stable fingerprint of a sentence, so two holds at one tick get two keys.
@@ -164,8 +296,56 @@ export function ForecastPanel({ params }: PanelProps) {
   const [indicator, setIndicator] = useState<ForecastIndicator | undefined>();
   const [cost, setCost] = useState<RunCost | undefined>();
   const [features, setFeatures] = useState<ForecastFeatures | undefined>();
-  const [analysis, setAnalysis] = useState<AnalysisPublished | undefined>();
+  const [announced, setAnnounced] = useState<AnalysisPublished | undefined>();
+  /**
+   * The standing analysis read off the store's inventory, for a console that heard none.
+   *
+   * Asked for **once**, when this panel mounts without an announcement, and never again: an
+   * analysis that lands later arrives on the topic, because anything that produces one announces
+   * it. So this is not a poll and cannot become one — there is no cadence here to make it a fetch
+   * per tick, which is the sentence `ColumnProvenance`'s own header has to stay true to.
+   */
+  const [adopted, setAdopted] = useState<StandingAnalysis | undefined>();
+
+  /**
+   * What the region reads: what this console was told, or failing that what the store says
+   * stands. An announcement always wins — it is the current cycle, and the adopted one is
+   * whatever was last published before anyone was listening.
+   */
+  const analysis: StandingAnalysis | undefined = useMemo(
+    () => (announced ? { collections: announced.collections, heard: true } : adopted),
+    [announced, adopted],
+  );
+  /**
+   * Which analysis the depth axis in hand was taken from, so it is fetched once per cycle and a
+   * standing restatement — which carries the same collection names — asks for nothing.
+   */
+  const gridForRef = useRef<string | undefined>(undefined);
+  /**
+   * How many times the depth axis has been asked for and not got. The allowance is small because
+   * the thing it bounds is a retry on the analyst's restatement cadence, not a user action.
+   */
+  const attemptsRef = useRef(0);
+  /** Whether the store has been asked what stands; see the adoption effect below. */
+  const askedStoreRef = useRef(false);
+  /** Which analysis the axis has already been asked for and honestly not got. */
+  const askedForRef = useRef<string | undefined>(undefined);
+  /** True once the axis has been asked for its allowance of times and not got. */
+  const [gridGaveUp, setGridGaveUp] = useState(false);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
+  /**
+   * The analysis collection `columnGrid` was read for, as *state* beside the ref that bounds the
+   * asking.
+   *
+   * **The ref cannot answer the question the surface asks.** A ref does not re-render, and the
+   * question — are the depths on screen this cycle's? — is a fact the region has to state. It was
+   * being answered with `gridGaveUp`, which is a narrower predicate: that covers the route where
+   * the inventory *refuses* three times, and not the route where it answers 200 without carrying
+   * this cycle's holding, which spends nothing, is asked once per cycle by design, and leaves the
+   * previous cycle's axis standing exactly the same way. The second route is the one the shipped
+   * configuration actually produces. Comparing the names covers both and needs no counter.
+   */
+  const [gridFor, setGridFor] = useState<string | undefined>(undefined);
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
   const [refused, setRefused] = useState(0);
@@ -217,34 +397,6 @@ export function ForecastPanel({ params }: PanelProps) {
       }),
     );
     stops.push(
-      // **A second chance at the grid, and only while there is not one.** It was read from
-      // the inventory on mount and nowhere else, so a console that mounted while the store
-      // was still empty — which a browser does, since the page loads before the pre-roll
-      // finishes — never got one, and the centre region said "no analysis yet" for the rest
-      // of the session however many analyses arrived. Measured that way in a built instance
-      // before this: the chooser drew no squares at all.
-      //
-      // This is not a poll and cannot become one: it is driven by an announcement, and the
-      // guard means it can fire at most once in the life of the panel.
-      client.subscribe(config.topics.holdings, () => {
-        if (!gridWantedRef.current) return;
-        gridWantedRef.current = false;
-        void (async () => {
-          try {
-            const response = await fetch(config.endpoints.holdings);
-            if (!response.ok) return;
-            const body: unknown = await response.json();
-            if (!validator.validate('holdings-inventory', body).ok) return;
-            const grid = columnGridOf((body as HoldingsInventory).holdings[0] as CoverageHolding | undefined);
-            if (grid) setColumnGrid(grid);
-            else gridWantedRef.current = true;
-          } catch {
-            gridWantedRef.current = true;
-          }
-        })();
-      }),
-    );
-    stops.push(
       // Which analysis the centre region reads from — the *standing* declaration, not the
       // announcement. They carry the same message under the same master, and the difference
       // is what listens: the announcement is what the model runner starts a forecast on, so
@@ -252,7 +404,7 @@ export function ForecastPanel({ params }: PanelProps) {
       // Nothing is fetched here, and nothing is fetched until a reader picks a square.
       client.subscribe(config.topics.analysis_standing, (message) => {
         if (!drawable(message.topic, message.payload)) return;
-        setAnalysis(message.payload as AnalysisPublished);
+        setAnnounced(message.payload as AnalysisPublished);
       }),
     );
     stops.push(
@@ -335,15 +487,170 @@ export function ForecastPanel({ params }: PanelProps) {
     return () => {
       for (const stop of stops) stop();
     };
-  }, [client, config.topics, config.endpoints.holdings, drawable, validator]);
+    // `config.endpoints.holdings` is gone from this list: the subscription that fetched the
+    // inventory on a holdings announcement was removed, and nothing in this effect has read that
+    // endpoint since. A dependency here tears down and rebuilds every subscription, which is why
+    // the list is worth keeping honest even where the value is stable.
+  }, [client, config.topics, drawable, validator]);
 
-  // Whether the centre region's grid is still unknown, read inside a subscription without
-  // making the subscription depend on it — a dependency there would tear down and rebuild
-  // every subscription the moment the grid arrived.
-  const gridWantedRef = useRef(true);
+  /**
+   * The depth axis, fetched once for each analysis cycle the panel comes to draw. The only
+   * place it is fetched.
+   *
+   * Driven by the announcement and not by a timer, and it is `gridForRef` that makes that true
+   * rather than the dependency list. The docstring here used to say "the dependency is the
+   * analysis's own collection name, so a standing restatement changes nothing" — the dependency
+   * is the analysis *object*, whose identity changes on every restatement, and what actually
+   * stops the re-fetch is the guard on the line below. The distinction is not academic: on a
+   * fetch that fails, the ref is never set and every restatement asks again, which is a retry
+   * and is what should happen, but it is a retry rather than the nothing the old sentence
+   * claimed.
+   *
+   * Keyed on the *analysis holding* rather than taking whatever the inventory lists first,
+   * because the eras do not share a depth axis and a row's depth is joined against the
+   * contributions document (`gridForAnalysis`).
+   *
+   * A cycle whose axis cannot be read leaves the *previous* cycle's grid standing rather than
+   * clearing it: the chooser then offers depths the new analysis may not be filed at, which
+   * `levelAtDepth` refuses row by row and the profile states. Clearing it would take the whole
+   * region away over one failed inventory fetch, which is the worse of the two.
+   */
+  /**
+   * Ask the store, once, what analysis stands — for a console that heard none.
+   *
+   * See `standingAnalysisIn` for why this exists: the analyst restates only what it holds in
+   * memory, a start condition restores the store and not that memory, and a reader who opens the
+   * console after a snapshot-seeded pre-roll therefore meets a region that says nothing has been
+   * announced while the store holds several analyses the query layer will serve.
+   *
+   * **Once, and only where nothing was heard.** The guard is `announced`, not `analysis` — with
+   * `analysis` this would re-ask the moment it adopted one, having just satisfied its own
+   * condition. Nothing here is clocked: an analysis published later is announced, and the
+   * subscription above supersedes whatever this found.
+   */
+  useEffect(() => {
+    if (announced || adopted || askedStoreRef.current) return;
+    askedStoreRef.current = true;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(config.endpoints.holdings);
+        if (!response.ok || cancelled) return;
+        const body: unknown = await response.json();
+        if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
+        const standing = standingAnalysisIn(body as HoldingsInventory);
+        if (standing) setAdopted(standing);
+      } catch {
+        // Nothing to say and nothing to retry: the region's existing sentence — that no analysis
+        // has been announced — is then exactly true of this console, and the next cycle announces.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [announced, adopted, config.endpoints.holdings, validator]);
 
-  // The store's own inventory, once, on mount. Everything after it arrives on an
-  // announcement; this is the history that had already happened when the console opened.
+  useEffect(() => {
+    const named = analysis?.collections.analysis;
+    if (!named || gridForRef.current === named) return;
+    // **Bounded, because a retry clocked by restatements is a fetch on a cadence.** On a failed
+    // inventory fetch `gridForRef` is never set, so the next standing restatement asks again —
+    // which is right once or twice and is, with the endpoint down, one fetch every
+    // `restate_every_ticks` for the life of the tab, unbacked-off and invisible. The region's own
+    // header two files away says "not on a tick, not on an announcement, not on a timer", and the
+    // sibling slab effect was corrected against that sentence in this same series. After the
+    // allowance the region stops asking and says so — `gaveUp`, below, rather than leaving the
+    // "the store had none when this console asked" sentence standing, which describes a state it
+    // is no longer in.
+    // **Set where the allowance is spent, not on the next entry.** It was set here — on the
+    // *following* effect run — so between the last failure and the next restatement the region
+    // went on saying "the store had none when this console asked", describing a wait it had
+    // already abandoned. With the clock pinned, which is every capture proof and any harness an
+    // operator has stopped, no next restatement arrives and that sentence is permanent. Two
+    // representations of one fact, updated at different moments.
+    if (attemptsRef.current >= GRID_ATTEMPTS) return;
+    // Asked once for this analysis, whatever the answer was: see the `!grid` branch below.
+    if (askedForRef.current === named) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(config.endpoints.holdings);
+        // **Checked here, not after the body is read.** `spendAttempt`'s docstring says a
+        // cancelled attempt is not an outcome, and two of the three spend sites did not honour
+        // it: a refusal or a throw on a request whose effect had already been torn down spent one
+        // and moved the give-up flag. Two overlapping requests against a refusing endpoint —
+        // which a restatement every 60 ticks makes ordinary, and which the narrow capture pass
+        // drives deliberately — burned two of three allowances in one restatement interval.
+        if (cancelled) return;
+        // **The attempt is spent where the answer was bad, and nowhere else.** It used to be
+        // counted *before* the request, which made a cancellation cost one: React runs the
+        // previous effect's cleanup before the next body, so a restatement arriving while a fetch
+        // was in flight discarded that fetch's result and then spent another attempt on the
+        // retry. Three fast restatements — a restatement is 60 ticks, which is ~60 ms of real
+        // time at the configured `max_rate`, and `capture:forecast` drives at exactly that right
+        // after a breakpoint crossing has remounted the panel — and the region was dead for the
+        // session. Over a network seam the round trip is bounded by nothing at all, which is the
+        // case Principle XI says no code path may assume away.
+        if (!response.ok) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
+          return;
+        }
+        const body: unknown = await response.json();
+        if (cancelled) return;
+        if (!validator.validate('holdings-inventory', body).ok) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
+          return;
+        }
+        const grid = gridForAnalysis(body as HoldingsInventory, analysis);
+        // **Given back here, and the comment that said so used to be the only thing doing it.** A
+        // cycle whose axis the inventory does not carry *yet* is not a failed fetch — the request
+        // answered, and answered honestly — so it must not spend the allowance. It did: the
+        // attempt was counted before the request and never returned on this path, so three such
+        // cycles in a row silenced the region for the life of the panel, however many later
+        // analyses would have answered. That is the fault the deleted holdings subscription
+        // existed against, in a smaller shape.
+        // **An honest "not there" is answered once per cycle, not once per restatement.** It
+        // spends none of the allowance — the allowance is for a seam that will not answer at all —
+        // but it must not be asked again for the *same* analysis either: `analysis` is a fresh
+        // object on every restatement, so "spends nothing" alone meant one full inventory fetch
+        // every `restate_every_ticks`, unbacked-off, for the life of the tab, two files from a
+        // header that says "not on a tick, not on an announcement, not on a timer". Recording the
+        // name here bounds it to one ask per cycle, and the next cycle's own name asks again.
+        if (!grid) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'absent');
+          askedForRef.current = named;
+          return;
+        }
+        gridForRef.current = named;
+        setGridFor(named);
+        // Through the policy, not beside it. The reset was written inline, so `spendAttempt`'s
+        // `'answered'` arm had no production caller and the test asserting it held a path the
+        // panel never took — in a function extracted *because* the policy could not be reached
+        // through the panel.
+        attemptsRef.current = spendAttempt(attemptsRef.current, 'answered');
+        setGridGaveUp(false);
+        // **The same object where the axis is the same, because the identity is a dependency.**
+        // `columnGridOf` returns a fresh literal, and `ColumnProvenance`'s slab effect depends on
+        // it — so a new cycle fired the area query once on the analysis and again, one round trip
+        // later, on this object's new identity: two byte-identical full-grid queries a cycle, one
+        // discarded, under a header saying "never twice for one cycle". A cycle that spans the
+        // same depths hands back the object already in hand.
+        setColumnGrid((standing) => (sameGrid(standing, grid) ? standing : grid));
+      } catch {
+        // Left for the next restatement to ask again, within the allowance above; a chooser over
+        // no axis is drawn as absent. Cancelled reads spend nothing, as above.
+        if (cancelled) return;
+        attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+        setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [analysis, config.endpoints.holdings, validator]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -361,15 +668,15 @@ export function ForecastPanel({ params }: PanelProps) {
       }
       if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
       const inventory = body as HoldingsInventory;
-      // The grid the centre region's chooser spans, read off a holding's own manifest rather
-      // than from configuration: a chooser laid over a domain the store does not hold would
-      // offer squares that resolve to nothing. Any holding will do — every era shares the
-      // one grid — so the first is taken, and its absence leaves the chooser undrawn.
-      const grid = columnGridOf(inventory.holdings[0] as CoverageHolding | undefined);
-      if (grid) {
-        setColumnGrid(grid);
-        gridWantedRef.current = false;
-      }
+      // The depth axis is *not* read here. It was, and so was a holdings-announcement
+      // subscription, and so is the per-analysis effect below — three paths and two refs
+      // answering one question, able to disagree about it: the announcement path set the grid
+      // without setting `gridForRef`, so the effect then re-fetched the whole inventory for a
+      // cycle whose axis was already in hand. The axis belongs to an analysis, the effect below
+      // is keyed on exactly that, and the analyst publishes the holdings before it announces the
+      // analysis that names them — so by the time there is an analysis to take an axis from, the
+      // inventory carrying it is already in the store. This effect seeds the history and nothing
+      // else.
       const seeded = entriesFromInventory(inventory);
       setEntries((previous) => {
         const known = new Set(previous.map((entry) => entry.runId));
@@ -438,11 +745,25 @@ export function ForecastPanel({ params }: PanelProps) {
 
         <section className="forecast-region" data-region="volume" aria-label="what a cell’s value was made from">
           <h3>What it is made from</h3>
-          {/* The stub this replaces named the whole region as feature 124's. Most of it was
-              not: the analyst has published the per-cell shares since feature 116, and only
-              the per-source rays are blocked. What is still 124's is said inside the region,
-              beneath the reading, where a reader meets it after the thing that does work. */}
-          <ColumnProvenance analysis={analysis} grid={columnGrid} edrPrefix={config.endpoints.edr} />
+          {/* The stub this replaced named the whole region as feature 124's, and then this
+              comment said the per-source rays were still blocked. Both have been overtaken: the
+              analyst publishes the contributions, the rays are drawn from them, and what is
+              still to come — the volume the plan is a section through — is said inside the
+              region, beneath the reading, where a reader meets it after the thing that works. */}
+          <ColumnProvenance
+            analysis={analysis}
+            grid={columnGrid}
+            edrPrefix={config.endpoints.edr}
+            contributionsPrefix={config.endpoints.contributions}
+            validator={validator}
+            gridGaveUp={gridGaveUp}
+            // The axis on screen is not this cycle's: it was read for an earlier analysis and
+            // every route that could replace it has failed or not answered. Computed from the
+            // two names rather than from the retry counter, which is a per-tab total and cannot
+            // say anything about *this* cycle (three refusals spread over three cycles satisfy
+            // it while this cycle was asked once).
+            axisIsStale={analysis !== undefined && gridFor !== undefined && gridFor !== analysis.collections.analysis}
+          />
         </section>
 
         <section className="forecast-region" data-region="ahead" aria-label="the spread ahead">

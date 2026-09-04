@@ -32,6 +32,7 @@ import { runGate as truthInitialisation } from '../gates/check-truth-initialisat
 import { runGate as blogLength } from '../gates/check-blog-length.js';
 import { runGate as replayMarkers, scan } from '../gates/check-replay-markers.js';
 import { runGate as declaredCost } from '../gates/check-declared-cost.js';
+import { runGate as captureInventory } from '../gates/check-capture-inventory.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -357,6 +358,81 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(stale.length).toBeGreaterThan(0);
     expect(stale.map((f) => f.message).join('\n')).toMatch(/drifted|missing/);
     expect(typesDrift(REPO_ROOT)).toEqual([]);
+  });
+  it('capture-inventory: the record and the workflow are held together, in every spelling of a step', () => {
+    // **The fixtures are two spellings this gate's first pattern could not see**, and they are
+    // here because it was declared working after three plants of a third spelling. A gate whose
+    // own regex is narrower than the thing it holds has never been in a position to fail, which
+    // is the fault it was written about, one level down.
+    //
+    // `run: pnpm capture:widgets` — no `run` verb, which is the form CLAUDE.md's own commands
+    // table uses and therefore the one a contributor copies.
+    const bare = captureInventory(join(fixtures, 'capture-bare-pnpm')).map((finding) => finding.message);
+    expect(bare).toEqual([
+      expect.stringMatching(/CI runs capture:widgets and this list does not name it/),
+      expect.stringMatching(/says two capture proofs; CI runs 3/),
+    ]);
+
+    // A digit in the name: `capture:map2` matched as `capture:map` under `[a-z-]+`, so a step
+    // running a script that does not exist passed the name check *and* the count.
+    const digits = captureInventory(join(fixtures, 'capture-digit-suffix')).map((finding) => finding.message);
+    expect(digits).toEqual([
+      expect.stringMatching(/CI runs capture:map2 and package.json defines no such script/),
+      expect.stringMatching(/CI runs capture:map2 and this list does not name it/),
+      expect.stringMatching(/this list names capture:map and .*ci\.yml does not run it/),
+    ]);
+
+    // The number stated in prose beside the list is a second place for the same fact to be wrong.
+    expect(captureInventory(join(fixtures, 'capture-count')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/says three capture proofs; CI runs 2/),
+    ]);
+
+    // **And there are two such numbers**, four words apart in one paragraph: the captures, and
+    // the total including `replay-proof`. The gate held the second and not the first, and the
+    // first was wrong the day it was written — "seven more things" against eight.
+    expect(captureInventory(join(fixtures, 'capture-total')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
+    ]);
+
+    // **Two sentences stating the total is itself the finding.** The first match anywhere in
+    // the record wins, so a record that explains the rule before stating it had the gate holding
+    // the explanation's number — five — and leaving the one beside the list unheld. This
+    // fixture's own list is correct (three things: two captures and replay-proof), so with the
+    // match taking the first occurrence silently it reported a wrong number on a right record,
+    // and taking the last it would have reported nothing on a wrong one. Neither is a check.
+    expect(captureInventory(join(fixtures, 'capture-decoy')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/2 sentences state how many more things CI runs/),
+      expect.stringMatching(/says CI runs five more things.*it runs 3/),
+    ]);
+
+    // **A comment naming a command is not a step.** The pattern is deliberately wide, having
+    // been too narrow twice — but run over the whole file it also matched prose, and this
+    // workflow carries a fifteen-line comment above the forecast step. Three findings on a
+    // correct tree, greenable only by writing a lie into the record.
+    expect(captureInventory(join(fixtures, 'capture-comment'))).toEqual([]);
+
+    // **Every form of the command, not the one the workflow happens to use.** Anchored on `run:`
+    // the pattern could not see a multi-line `run: |` block (`|` is not whitespace) nor
+    // `pnpm -C app run capture:x` (`-C app` sits between `pnpm` and `run`) — both ordinary YAML,
+    // both adding a proof the record does not name while the gate reported clean.
+    expect(captureInventory(join(fixtures, 'capture-block')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/CI runs capture:widgets and this list does not name it/),
+      expect.stringMatching(/says CI runs three more things.*it runs 4/),
+      expect.stringMatching(/says two capture proofs; CI runs 3/),
+    ]);
+
+    // **One proof run at two views is one proof.** The record names commands and the workflow
+    // runs steps; counting steps made an honest record red — seven names against eight steps,
+    // fixable only by writing "eight" over a list of seven. `capture:glance` already takes a view
+    // argument, so a second such step is a plausible next change rather than a hypothetical.
+    expect(captureInventory(join(fixtures, 'capture-twice'))).toEqual([]);
+
+    // And a record that has lost the sentence entirely is a refusal, not a pass: a gate that
+    // cannot find what it holds has proved nothing.
+    expect(() => captureInventory(join(fixtures, 'capture-unnamed'))).toThrow(/no longer carries the sentence/);
+
+    // The real tree agrees with itself.
+    expect(captureInventory()).toEqual([]);
   });
 });
 

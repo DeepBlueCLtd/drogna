@@ -165,6 +165,33 @@ times in five, and this was one of the four.
 
 What the drawing says about itself is unchanged in kind. `Volume.tsx` still measures the
 distinct-depth count in the field it was served and still states it, and still says the
-flatness is the grid's if it ever finds one again — with the spacing read off the levels
-rather than typed, because that sentence said "200 m" while the axis was being changed to
-40 m.
+field is level when it finds it so — with the spacing read off the levels rather than
+typed, because that sentence said "200 m" while the axis was being changed to 40 m.
+
+## What this does not deliver, and why it is here rather than in a follow-up
+
+FR-120's rationale is that the thermocline "domes, tilts and breaks". Form 2 delivers the
+doming and the breaking, both local. It does **not** deliver a domain-wide tilt, and the
+attempt to add one is the reason this section exists rather than an issue saying "next
+time".
+
+Two shapes were tried and both failed for the same reason. The front's `tanh` step is
+recorded above. A smooth basin-scale ramp — `depth_m + tilt × (latitude − mid)`, which is
+what actually sets thermocline depth at basin scale and has no localised extremum for a
+blob estimator to catch on — gives exactly the broad shape wanted: at 20 m per degree the
+surface takes four distinct depths, the commonest three spanning 80 m, and the modal share
+falls from 95% to 41%. It also puts seed 1180003's front anchor 74 km across against its
+30 km bound, at every tilt tried down to 10 m per degree.
+
+**The tension is structural, not a bug in either.** `model-runner/features.ts` locates all
+three features by horizontal temperature structure, and a thermocline whose depth varies
+horizontally *is* horizontal temperature structure at the depths near the layer. Broad
+layer shape and estimator bounds derived from the authoring jitter are competing for the
+same signal. Resolving it needs one of: an estimator that reads the depth structure rather
+than the depth-averaged anomaly, bounds that account for a sloping layer, or a decision
+that the demo prefers the shape to the scores. All three are larger than this change and
+none is a panel's or a data commit's to take.
+
+So the surface domes where a feature displaces it and is level elsewhere, the drawing
+counts and states both, and the requirement's third verb is unmet with the measurement on
+the record.

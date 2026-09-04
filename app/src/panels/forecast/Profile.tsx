@@ -42,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { backgroundRaysIn, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { backgroundRaysIn, levelAtDepth, paletteSlots, sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -111,6 +111,7 @@ function bandsFor(
   level: ProfileLevel,
   document: AnalysisContributions | undefined,
   labels: readonly string[],
+  slots: ReturnType<typeof paletteSlots>,
 ): Band[] {
   // A refused depth has no reading at all, so it has no bands: the row states the refusal
   // rather than drawing a bar out of four unknowns.
@@ -166,14 +167,15 @@ function bandsFor(
     for (const entry of served.contributions) {
       const source = document?.sources[entry.source];
       if (!source) continue;
-      const instrument = instrumentAt(entry.source);
+      const hue = instrumentAt(slots.hue[entry.source] ?? 0).hue;
+      const texture = instrumentAt(slots.texture[entry.source] ?? 0);
       bands.push({
         key: source.source_id,
-        label: labels[entry.source] ?? source.datastream_id,
+        label: labels[entry.source],
         value: entry.contribution,
         // Labelled so two sources of one instrument are told apart (see `sourceLabels`).
-        hue: instrument.hue,
-        hatchAngle: instrument.angle,
+        hue,
+        hatchAngle: texture.angle,
         kind: 'source',
       });
     }
@@ -223,6 +225,10 @@ export function Profile({
   // handed over beside it.
   const backgroundDrawn = rays ? backgroundRaysIn(rays).map((ray) => ray.datastreamId) : [];
   const labels = served ? sourceLabels(served.sources) : [];
+  // The palette is the instrument's, not the served array's — see `Ray.paletteSlot`. Computed
+  // once here and passed down rather than derived per band, so the bar and the swatch beside its
+  // row cannot disagree about which colour a source has.
+  const slots = paletteSlots(served?.sources ?? []);
   const exhausted = served ? paletteExhausted(served.sources.length) : false;
 
   return (
@@ -287,7 +293,7 @@ export function Profile({
 
       <ol className="forecast-column-levels">
         {levels.map((level, index) => {
-          const bands = bandsFor(level, served, labels);
+          const bands = bandsFor(level, served, labels, slots);
           const magnitude = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? Math.abs(band.value) : 0), 0);
           const total = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? band.value : 0), 0);
           // A share the query never served is absent, and absent is not nought (FR-041): it is
@@ -401,10 +407,10 @@ export function Profile({
                 <th scope="row">
                   <span
                     className="forecast-share-swatch"
-                    style={{ background: instrumentAt(ray.sourceIndex).hue }}
+                    style={{ background: instrumentAt(ray.paletteSlot).hue }}
                     aria-hidden="true"
                   />
-                  {labels[ray.sourceIndex] ?? ray.datastreamId}
+                  {labels[ray.sourceIndex]}
                   <span className="forecast-column-kind"> ({ray.kind})</span>
                 </th>
                 <td className={ray.contribution < 0 ? 'is-negative' : undefined}>
@@ -426,7 +432,20 @@ export function Profile({
         </table>
       )}
 
-      {rays && (
+      {/* **The caption states a fact about a level, so it does not state one about a level the
+          document has not got.** With no level matched every figure sums to nought and this read
+          "0 of this column's N sources reached that level, contributing 0.0000 … ω = 0.0000, the
+          weight this cycle's observations added" — a positive claim, printed directly under the
+          row's own sentence saying the analysis carries no such level. */}
+      {rays?.noSuchLevel && (
+        <p className="forecast-column-caption">
+          The analysis carries no level at{' '}
+          <strong>{selectedLevel === undefined ? 'that depth' : `${selectedLevel.toFixed(0)} m`}</strong>, so there is
+          nothing here to sum: these are not zero contributions, they are no reading. The depths this cycle is filed at
+          are the rows above.
+        </p>
+      )}
+      {rays && !rays.noSuchLevel && (
         <p className="forecast-column-caption">
           {rays.reachedCount} of this column’s {rays.rays.length} source
           {rays.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}

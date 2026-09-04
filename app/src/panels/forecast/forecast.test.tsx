@@ -39,10 +39,17 @@ import { fileURLToPath } from 'node:url';
  * restated here — a marker asserted against a hard-coded `#10151b` would stop being an
  * assertion the day the shell's background moved.
  */
-const ground =
-  /--shell-bg:\s*(#[0-9a-f]{3,8})/i.exec(
+const ground = ((): string => {
+  const declared = /--shell-bg:\s*(#[0-9a-f]{3,8})/i.exec(
     readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shell', 'shell.css'), 'utf8'),
-  )?.[1] ?? '';
+  )?.[1];
+  // Thrown rather than defaulted to `''`. With an empty ground the "not painted in the ground
+  // colour" assertion below becomes a verbatim duplicate of the "carries paint at all" one above
+  // it, and the check this file exists for disappears with nothing going red — which is what a
+  // `?? ''` bought. `greyscale.test.ts` guards the same read; this one did not.
+  if (!declared) throw new Error('shell.css declares no --shell-bg, so a marker cannot be held against the ground');
+  return declared;
+})();
 
 /** The region's own stylesheet, for the carriers jsdom cannot apply but a file can be read for. */
 const FORECAST_CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'forecast.css'), 'utf8');
@@ -275,9 +282,17 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     const body = (await (await fetch(area as string)).json()) as { ranges?: Record<string, unknown> };
     const names = Object.keys(body.ranges ?? {});
     expect(names.length, 'the area query served no ranges to name').toBeGreaterThan(0);
-    const resolved = new Set(names.map((name) => sourceOf(name)));
-    expect(resolved.has(undefined), `a served share resolves to nothing: ${names.join(', ')}`).toBe(false);
-    expect([...resolved].sort()).toEqual(['archive', 'departure', 'measurement', 'model']);
+    const resolved = names.map((name) => sourceOf(name));
+    expect(resolved.includes(undefined), `a served share resolves to nothing: ${names.join(', ')}`).toBe(false);
+    expect([...new Set(resolved)].sort()).toEqual(['archive', 'departure', 'measurement', 'model']);
+    // **One name per share, and this is the half a `Set` hid.** `sourceOf` reads the segment
+    // after the last `_share_`, so it discards the variable: eight names from two variables
+    // collapse to the same four keys and satisfy both assertions above exactly, while the slab
+    // loop drew whichever was written last. Counted, so a second variable's provenance is a red
+    // test rather than a wrong picture under a legend naming the other one.
+    expect(resolved.length, `${names.length} ranges resolve to ${new Set(resolved).size} shares`).toBe(
+      new Set(resolved).size,
+    );
 
     // The legend is always present, because identity is never colour alone.
     const legend = document.querySelectorAll('.forecast-share-legend li');

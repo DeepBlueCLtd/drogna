@@ -222,6 +222,14 @@ drawing in it.
       *Built, and held over the drawn geometry.* Every ray in the document is asserted to live
       inside the surface plane's own SVG, with both endpoints inside that plane's view box.
 
+      *Amended at T022q, and the amendment is the point of the tick.* The view-box half is gone.
+      `placeOn` clamps to `[0, kept.length]` and the view box is `0 0 cols rows`, so the clamp
+      bound and the assertion bound were one expression and no input could fail it — the second
+      time this assertion has been worthless, the first being the reason recorded below. The
+      clamp is asserted in `rays.test.ts` against out-of-range inputs, where the clamp is. What
+      remains here, and can fail, is that every ray lives inside the surface plane's SVG, carries
+      four finite coordinates, and is not a point.
+
       *Corrected after review, and the first version is the reason T022f exists:* it walked each
       ray's attributes refusing anything that read as a depth — which an SVG line cannot carry,
       so it passed on any code that drew lines at all, including code drawing them through a
@@ -538,7 +546,13 @@ the part worth recording, because each was a sentence asserting a property the c
       unreachable hue literal, and `contributionResidual` — exported from a production module
       with no production caller while the region's own caption printed `ω − remainder`, a
       rearrangement of the published weight that agreed with the drawn rays by construction. The
-      caption sums the rays now. `shares.test.ts` re-implements the analyst's munging and cannot
+      caption sums the rays now — which fixed the caption's arithmetic and **left the dead
+      export**, so this line read as resolved and was not. `contributionResidual` is still
+      exported from `rays.ts` with no production caller; both consumers are tests. It stays,
+      deliberately: it states the SC-001 identity once, beside the `RaySet` shape it reads, rather
+      than having each test carry its own opinion of what "the drawn contributions and the
+      remainder" means, and the test comment says so where a reader meets it. A decision, not a
+      fix. `shares.test.ts` re-implements the analyst's munging and cannot
       do otherwise across the seam, so the end-to-end binding went into `forecast.test.tsx`,
       where the parameter names are read off an EDR area response; watched failing against the
       original `endsWith('_departure')`.
@@ -683,6 +697,74 @@ the part worth recording, because each was a sentence asserting a property the c
       `pnpm check`, wrong again one entry later. Amended, with the rule that a pull request adding
       a capture step amends that line in the same change.
 
+- [x] T022r **A seventh round, and its two largest findings were about the picture rather than the
+      checks — the first time that has been true since T022c.**
+
+      **The instrument palette was keyed on the served document's encounter order.**
+      `contributions.ts` builds `sources` by first encounter while walking *this column's* levels,
+      so the order is a fact about which column was asked for: the same physical instrument came
+      out `#8b4bc8`, no dash, hatch 0° in one column and `#e0584a`, dash `6 3`, hatch 30° in the
+      next, with nothing on the surface saying the palette had been reassigned — in a region whose
+      whole premise is that a reader picks one square and then another. `rays.ts` opens by arguing
+      that order must be declared rather than encountered; the ray *list* honoured it and the
+      swatch beside each row did not.
+
+      Sorting would not have fixed it (two columns with different source sets give the same source
+      different ranks). The hue is keyed on the **instrument** — `datastream_id`, which is what
+      `INSTRUMENTS` is a palette *of* — so it means the same thing in any two columns whose
+      instrument sets agree, which is all the shell can promise without a list of every instrument
+      in the run. *And the first version of that fix traded one fault for another*: a loitering
+      platform puts three sources of one instrument in one column, and they drew as three adjacent
+      bands of one bar identical in colour **and** texture, which is the defect the greyscale work
+      exists against. Hue is the instrument's; dash and hatch step once per further source of it,
+      inside `INSTRUMENTS`, so they stay multiples of 30 and cannot land on a share's direction.
+
+      **`sourceOf` resolves any variable's share.** It reads the segment after the last `_share_`,
+      which discards the variable, so `salinity_share_measurement` and
+      `temperature_share_measurement` both answer `measurement` and the slab loop's last writer
+      won. The master frames temperature-only provenance as a size decision rather than a
+      permanent one. The new end-to-end test could not see it — eight names from two variables
+      collapse to the same four keys and satisfy both its assertions exactly — so it counts names
+      now, and a collision is a stated refusal rather than a field drawn under the wrong legend.
+
+      **The caption printed ω = 0.0000 as a fact about a level the document has not got.** With no
+      level matched every figure sums to nought, so "0 of this column's N sources reached that
+      level … ω = 0.0000, the weight this cycle's observations added" printed directly under the
+      row's own sentence saying the analysis carries no such level. `absenceOf` told those two
+      facts apart over the document; the ray set did not, so nothing reading the set could.
+
+      **The capture pinned the clock after the shell rendered**, and the pre-roll restores the
+      configured rate before that — so the simulation free-ran for the width of a render and a
+      round trip. The committed sidecar showed no drift, which is evidence the window was under a
+      second on one machine, not that it is bounded. The instant is now checked against the sum of
+      the condition's own legs on disk; watched failing with a planted 2.5-second delay, which it
+      reports as two ticks of host time in the artefact.
+
+      **A rule with nothing counting it.** T022q answered the CLAUDE.md capture-list drift with a
+      sentence asking the next author to keep it in step — and a sentence asking for something is
+      weaker than a check that has never been seen to fail, because it has never been in a
+      position to fail. `check-capture-inventory` reads the capture steps out of the workflow and
+      the backticked names out of the paragraph and fails on a difference in either direction, and
+      on the count stated in prose beside them. Watched failing three ways: a proof CI runs that
+      the record does not name, a name the record carries that CI does not run, and a count that
+      drifts from its own list.
+
+      Smaller: T017's tick still described the view-box loop deleted in T022q, which is what its
+      own second paragraph calls worse than no tick; the `ground` read in `forecast.test.tsx`
+      defaulted to `''`, which would have turned the "not painted in the ground colour" assertion
+      into a duplicate of the one above it with nothing going red; the remainder band's stripe is a
+      **third** hatch vocabulary at 135° — an odd multiple of 15, the shares' own series — living
+      only in CSS and outside the check written to prevent exactly that collision; the inventory
+      retry was unbounded, one fetch per restatement for the life of the tab with the endpoint
+      down; `rays.set` was returned and read nowhere; the palette had two spellings of "which
+      share is measurement" held in agreement by a test; two more unreachable `?? SOURCES[0]`
+      fallbacks; a docstring stranded above the wrong declaration and another duplicated; the
+      narrow pass skipped absent selectors silently, so a list of three boxes could be coverage of
+      one; `capture:forecast`'s own docstring sent the reader to `capture:mobile` for the question
+      its narrow pass was added to answer; the greyscale figures describe undimmed hues rather
+      than the composited pixel, which is Q-01 and now says so; and three different start
+      conditions were each called "the shipped" one.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath
@@ -724,9 +806,14 @@ the part worth recording, because each was a sentence asserting a property the c
       asks whether every region has *a* step and never what the step says, and the panel's own
       prose — careful to name the *part* that is missing rather than the region — was rewritten
       without the tour beside it. `forecast.test.tsx` now binds the two: a step may call a region
-      unbuilt only where the rendered region has nothing in it to read, and what counts as
-      something to read is taken from the DOM rather than from a list in the test. Watched
-      failing by restoring the old sentence.
+      unbuilt only where the rendered region has nothing in it to read. **Half of that is taken
+      from the DOM and half is a phrase match, and the difference matters**: `drawsSomething`
+      asks the rendered region, so a region that grows a surface moves the check with it; the
+      claim is detected by `/this region\b[^.]*\bnot built/i`, so a step reworded to "the volume
+      is not built" escapes it. Watched failing by restoring the old sentence, which is why the
+      check reads more general than it is. Widening it means deciding what a whole-region claim
+      *is*, which is a judgement a regex cannot hold; what it buys today is that the sentence
+      this feature shipped for a year cannot come back.
 
 ## The record
 

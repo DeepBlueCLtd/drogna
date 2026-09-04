@@ -21,3 +21,4 @@ gates/check-blog-length.ts
 gates/check-snapshot-drift.ts
 gates/check-replay-markers.ts
 gates/check-declared-cost.ts
+gates/check-capture-inventory.ts

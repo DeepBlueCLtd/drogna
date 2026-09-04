@@ -55,6 +55,7 @@
  * rays; it is not — FR-129 is about a *level*, and the distinction it asks for is carried here
  * by the flag and by what the profile prints, not by a line disappearing.
  */
+import { INSTRUMENTS } from './shares.js';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
 
 /** One drawn ray: a source, where it is, how much it did, and the two numbers behind that. */
@@ -62,6 +63,43 @@ export interface Ray {
   readonly sourceId: string;
   /** Where this source sits in the served document's own table: its palette slot. */
   readonly sourceIndex: number;
+  /**
+   * Which palette entry draws this ray — the *instrument's* slot, not the source's.
+   *
+   * It was `sourceIndex`, which is a position in the served document's `sources` array, and that
+   * array is built by **first encounter while walking this column's levels** (`contributions.ts`
+   * assigns `named.size` as it meets each source). So the order is a function of which column was
+   * asked for: the same physical instrument came out `#8b4bc8`, no dash, hatch 0° in one column
+   * and `#e0584a`, dash `6 3`, hatch 30° in the next — in a region whose whole premise is that a
+   * reader picks one square and then another. Nothing on the surface said the palette had been
+   * reassigned. `rays.ts` opens by arguing that order must be declared rather than encountered,
+   * and the ray *list* honoured it while the swatch beside each row did not.
+   *
+   * Sorting the sources would not have fixed it: two columns with different source sets give the
+   * same source different ranks. What is stable is the **instrument** — `datastream_id`, which is
+   * the vessel's own name for the thing and is what `INSTRUMENTS` is a palette *of*. Two sources
+   * of one instrument, either side of a cell boundary, now share its colour and are told apart by
+   * the `·1`/`·2` ordinal and by their positions, which is what that ordinal exists for.
+   *
+   * This is stable across any two columns whose instrument sets agree, and the shell cannot
+   * promise more than that without a list of every instrument in the run, which no served
+   * document carries. The swatch sits beside the instrument's name in the table, and the name is
+   * the identity.
+   */
+  readonly paletteSlot: number;
+  /**
+   * Which palette entry's **dash and hatch angle** draw this ray. The instrument's own, stepped
+   * once for each further source that instrument has in this column.
+   *
+   * Hue alone cannot carry both things the reader needs. Keying it on the instrument makes a
+   * colour mean the same thing in two columns — the fault above — but a loitering platform puts
+   * three sources of one instrument in one column, and they then drew as three adjacent bands of
+   * one bar identical in colour *and* texture, which is the defect the greyscale work exists
+   * against. So the hue is the instrument's and the texture separates its sources: the step stays
+   * inside `INSTRUMENTS`, whose angles are multiples of 30, so it cannot land on a share's
+   * direction (odd multiples of 15) or the remainder band's.
+   */
+  readonly textureSlot: number;
   readonly datastreamId: string;
   readonly kind: AnalysisContributionsSource['kind'];
   /** Where the instrument was: the end of the drawn line. */
@@ -97,6 +135,18 @@ export interface RaySet {
   readonly widest: number;
   /** How many of the column's sources reached the levels drawn. */
   readonly reachedCount: number;
+  /**
+   * True where a depth was asked for and the document carries no level at it.
+   *
+   * "No such level" and "a level nothing reached" are different facts and were the same zero.
+   * With no level matched, `levels` is empty, so every figure sums to nought and the caption
+   * printed *"0 of this column's N sources reached that level, contributing 0.0000 between them
+   * … ω = 0.0000, the weight this cycle's observations added"* — a positive claim about a level
+   * the document says nothing about, directly under the row's own sentence saying the analysis
+   * carries no such level. `absenceOf` already tells these apart over the document; the ray set
+   * did not, so the caption beneath the map could not.
+   */
+  readonly noSuchLevel: boolean;
 }
 
 /**
@@ -144,6 +194,7 @@ export function levelAtDepth(
 export function raysFor(document: AnalysisContributions, depthM?: number): RaySet {
   const chosen = depthM === undefined ? undefined : levelAtDepth(document, depthM);
   const levels = depthM === undefined ? document.levels : chosen ? [chosen] : [];
+  const noSuchLevel = depthM !== undefined && chosen === undefined;
 
   /** Per source index over the chosen levels: the summed contribution, and its separation. */
   const summed = new Map<number, { contribution: number; separationKm: number; separationM: number }>();
@@ -175,11 +226,14 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
 
   // Every source the column carries, whether or not it reached the levels drawn: FR-128 fixes
   // the set, and the flag carries what changed.
+  const slots = paletteSlots(document.sources);
   const rays: Ray[] = document.sources.map((source, index) => {
     const entry = summed.get(index);
     return {
       sourceId: source.source_id,
       sourceIndex: index,
+      paletteSlot: slots.hue[index] ?? 0,
+      textureSlot: slots.texture[index] ?? 0,
       datastreamId: source.datastream_id,
       kind: source.kind,
       longitude: source.observed.longitude,
@@ -201,6 +255,7 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
     observationWeight,
     widest,
     reachedCount: summed.size,
+    noSuchLevel,
   };
 }
 
@@ -214,6 +269,34 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
  * column alone it keeps its plain name; where it carries more than one source, each gets its
  * ordinal, and the numbers table's separation column says which is physically which.
  */
+/**
+ * The palette entries each source is drawn in, by position in the served `sources` array: `hue`
+ * is the rank of its instrument among the column's own instruments, sorted by name, and `texture`
+ * steps from there once per further source of that same instrument.
+ *
+ * Sorted rather than encountered, for the reason `Ray.paletteSlot` gives at length — an
+ * encounter order is a fact about which column was asked for, and the region asks about several.
+ */
+export function paletteSlots(sources: readonly AnalysisContributionsSource[]): {
+  readonly hue: readonly number[];
+  readonly texture: readonly number[];
+} {
+  const instruments = [...new Set(sources.map((source) => source.datastream_id))].sort();
+  const ordinal = new Map<string, number>();
+  const hue: number[] = [];
+  const texture: number[] = [];
+  for (const source of sources) {
+    const slot = instruments.indexOf(source.datastream_id);
+    const nth = ordinal.get(source.datastream_id) ?? 0;
+    ordinal.set(source.datastream_id, nth + 1);
+    hue.push(slot);
+    // Stepped within `INSTRUMENTS`, so the angle stays a multiple of 30 and cannot collide with a
+    // share's hatch or the remainder band's however many sources one instrument has.
+    texture.push((slot + nth) % INSTRUMENTS.length);
+  }
+  return { hue, texture };
+}
+
 export function sourceLabels(sources: readonly AnalysisContributionsSource[]): readonly string[] {
   const seen = new Map<string, number>();
   for (const source of sources) seen.set(source.datastream_id, (seen.get(source.datastream_id) ?? 0) + 1);
@@ -299,7 +382,7 @@ export function drawnWidthOf(ray: Ray): number {
  * True where a ray's true width is below what the map can draw, so its drawn width is the floor
  * and not its contribution.
  *
- * Measured on the shipped loitering condition this is five rays of six at 0 m: the widths the
+ * Measured on the **loitering** condition this is five rays of six at 0 m: the widths the
  * proportional scale asks for run 8, 0.47, 0.073, 0.0082, 0.0033 and 0.0012 px. Drawing them
  * proportionally means drawing one ray and calling it six.
  */
@@ -314,7 +397,7 @@ export function underScale(ray: Ray): boolean {
    * **Interpolated, and the previous version's snapping is why.** This used to snap a value to
    * the nearest served axis entry and then that entry to the nearest *drawn* column, on the
    * argument that "two served cells can share one drawn column and the line lands within that".
-   * Measured on the shipped loitering condition, that argument's conclusion was wrong: the
+   * Measured on the **loitering** condition, that argument's conclusion was wrong: the
    * platform's sources sit within a cell or two of the column they reach, the map is thinned by
    * two, and **four of six rays came out with `x1 === x2` and `y1 === y2`** — including the one
    * carrying the whole width encoding. A line of zero length is not a thin line, it is no line,

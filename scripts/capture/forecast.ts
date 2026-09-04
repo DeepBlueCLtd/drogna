@@ -51,7 +51,11 @@ const startCondition = process.env.DROGNA_FORECAST_START ?? config.start_conditi
  * scrolls inside its own box with the separation column cut mid-value. The entry's requirement
  * paragraph promises exactly those two errors, so an artefact that clips them is evidence for a
  * claim it does not contain. At 2560 the region is 815 px and the table fits whole. How the same
- * region behaves at a phone's width is `capture:mobile`'s question and not this one's.
+ * region behaves at a phone's width is measured by this script's own narrow pass, below — this
+ * line used to send the reader to `capture:mobile`, which cannot answer it: that proof pins the
+ * clock and picks no column, so the rays, the profile and the numbers table are absent from every
+ * frame it takes. The two sentences disagreed for as long as the narrow pass existed, and the
+ * next person removing "duplicated" narrow-width machinery would have read this one.
  */
 const width = Number(process.env.DROGNA_FORECAST_WIDTH ?? 2560);
 /**
@@ -205,6 +209,33 @@ try {
     () => /rate 0/.test(document.querySelector('[data-testid="sim-rate"]')?.textContent ?? ''),
     { timeout: 30_000 },
   );
+
+  // **The instant the pin caught, checked against the one the configuration says it should.**
+  //
+  // The pre-roll pins the clock for its own script and, in a `finally`, restores the configured
+  // rate — one tick per real second — *before the shell mounts*. This script pins only after
+  // waiting for the shell to render, so the simulation free-runs for the width of that render and
+  // round trip. The committed sidecar happens to show none of that drift, which is evidence the
+  // window was under a second on one machine and not that it is bounded; on a loaded runner the
+  // shot is of a different simulated instant, of possibly a different cycle, and nothing else
+  // here would notice — `warmed.cycles >= 3` and `picked.rays > 0` both still hold.
+  //
+  // So the bound is taken from disk rather than from hope: a condition's pre-roll is the sum of
+  // its legs' ticks, and one tick is `tick_interval_us`, so the simulated instant the pin should
+  // have caught is arithmetic over `run.json`. Anything past it is host time in the artefact.
+  const preRollTicks = (config.start_conditions.conditions.find((entry) => entry.id === startCondition)?.legs ?? [])
+    .reduce((total, leg) => total + leg.ticks, 0);
+  const tickSeconds = config.clock.tick_interval_us / 1_000_000;
+  const epoch = Date.parse(config.clock.epoch);
+  const atPin = await page.getByTestId('sim-time').textContent();
+  const drift = Math.round((Date.parse(atPin ?? '') - epoch) / 1000 / tickSeconds) - preRollTicks;
+  if (!Number.isFinite(drift)) throw new Error(`the shell states no readable simulated time: ${atPin}`);
+  if (drift !== 0) {
+    throw new Error(
+      `the clock ran on for ${drift} tick(s) before it was pinned: the shot would be of ${atPin} rather than the ` +
+        `${startCondition} pre-roll's own ${preRollTicks} ticks, which is host time in the artefact`,
+    );
+  }
 
   // **The loop stops on a fact about the store, not on a class appearing in the document.** Its
   // first working version asked `document.querySelector('.forecast-share-map')` after each burst
@@ -371,9 +402,19 @@ try {
       if (document.documentElement.scrollWidth > window.innerWidth + 1) {
         out.push(`${label}: the page scrolls sideways`);
       }
-      for (const selector of ['.forecast-column', '.forecast-ray-note', '.forecast-column-readout']) {
+      // **A selector that is not there is reported, not skipped.** `.forecast-ray-note` renders
+      // only where a ray is under the width floor, and `.forecast-column-readout` only while a
+      // column is open — which the running clock can clear between the pick and this measurement.
+      // Skipping them silently made a list of three boxes read as coverage of three when it was
+      // coverage of one, and the failure was invisible: the pass reported the region sound.
+      const measuredHere: string[] = [];
+      for (const selector of ['.forecast-column', '.forecast-column-readout']) {
         const node = document.querySelector(selector);
-        if (!node) continue;
+        if (!node) {
+          out.push(`${label}: ${selector} was not on the page, so nothing was measured of it`);
+          continue;
+        }
+        measuredHere.push(selector);
         // A box whose content is wider than itself and which is not declared scrollable is
         // content a reader cannot reach. The numbers table is *meant* to scroll inside its own
         // box, which is why it is not in this list.
@@ -387,6 +428,13 @@ try {
       // Chromium: 900 and 900 for an svg overflowing a 200px parent — so `scrollWidth >
       // clientWidth` is false however far it sticks out. A selector that cannot report is worse
       // than no selector, because the list reads as coverage.
+      // The under-scale note is measured where it exists and its absence is a fact rather than a
+      // gap: a column whose rays are all above the floor draws no note, which is correct.
+      const note = document.querySelector('.forecast-ray-note');
+      if (note && note.scrollWidth > note.clientWidth + 1) {
+        out.push(`${label}: the under-scale note is ${note.scrollWidth}px of content in a ${note.clientWidth}px box`);
+      }
+
       const map = document.querySelector('.forecast-share-map');
       const holder = map?.parentElement;
       if (map && holder && map.getBoundingClientRect().width > holder.clientWidth + 1) {
@@ -394,9 +442,12 @@ try {
           `${label}: the share field is ${Math.round(map.getBoundingClientRect().width)}px wide in a ${holder.clientWidth}px column`,
         );
       }
-      return out;
+      return { failures: out, measured: [...measuredHere, ...(note ? ['.forecast-ray-note'] : [])] };
     }, `${size.width}x${size.height}`);
-    narrow.push(...measured);
+    narrow.push(...measured.failures);
+    // Printed, so the proof says what it looked at as well as what it found. A pass that reports
+    // only failures cannot be told from a pass that measured nothing.
+    console.log(`forecast: ${size.width}x${size.height} measured ${measured.measured.join(', ')}, and the share field`);
   }
   if (narrow.length > 0) throw new Error(`the centre region does not hold at a phone's width:\n${narrow.join('\n')}`);
 

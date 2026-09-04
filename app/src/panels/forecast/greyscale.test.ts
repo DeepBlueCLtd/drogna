@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AA_NON_TEXT, contrast, luminance } from '../../shell/colour.js';
-import { INSTRUMENTS, SOURCES } from './shares.js';
+import { INSTRUMENTS, REMAINDER_ANGLE, SOURCES } from './shares.js';
 
 /** The ground these are drawn on, read off the shell's own stylesheet rather than restated. */
 const SHELL_CSS = readFileSync(
@@ -27,6 +27,9 @@ const SHELL_CSS = readFileSync(
   'utf8',
 );
 const GROUND = /--shell-bg:\s*(#[0-9a-f]{3,8})/i.exec(SHELL_CSS)?.[1];
+
+/** The region's own stylesheet, for the hatch angles that are declared in CSS rather than in TS. */
+const FORECAST_CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'forecast.css'), 'utf8');
 
 describe('the instrument palette without colour', () => {
   it('climbs monotonically, so six sources are six greys rather than one', () => {
@@ -107,8 +110,18 @@ describe('the instrument palette without colour', () => {
       ).toBeGreaterThanOrEqual(AA_NON_TEXT);
     }
 
-    const shareAngles = SOURCES.map((source) => source.angle);
-    expect(new Set(shareAngles).size, 'two shares hatch at the same angle').toBe(SOURCES.length);
+    // The remainder band is a third vocabulary in the same bar, and its angle is declared rather
+    // than only living in the stylesheet — so it is reserved against both lists instead of being
+    // the one direction nothing knew was taken.
+    expect(
+      new RegExp(`\\.forecast-column-segment\\.is-remainder[^}]*repeating-linear-gradient\\(\\s*${REMAINDER_ANGLE}deg`).test(
+        FORECAST_CSS,
+      ),
+      `the remainder band is not drawn at the ${REMAINDER_ANGLE}° this file reserves for it`,
+    ).toBe(true);
+
+    const shareAngles = [...SOURCES.map((source) => source.angle), REMAINDER_ANGLE];
+    expect(new Set(shareAngles).size, 'two bands of one bar hatch at the same angle').toBe(shareAngles.length);
     for (const angle of shareAngles) {
       expect(
         INSTRUMENTS.some((instrument) => instrument.angle % 180 === angle % 180),

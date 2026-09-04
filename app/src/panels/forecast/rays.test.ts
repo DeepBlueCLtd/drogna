@@ -8,7 +8,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
-import { backgroundRaysIn, contributionResidual, drawableRays, levelAtDepth, placeOn, raysFor, sourceLabels } from './rays.js';
+import {
+  backgroundRaysIn,
+  contributionResidual,
+  drawableRays,
+  levelAtDepth,
+  paletteSlots,
+  placeOn,
+  raysFor,
+  sourceLabels,
+} from './rays.js';
 
 function source(
   id: string,
@@ -361,5 +370,83 @@ describe('matching a displayed depth to a level the document carries', () => {
     const single = axis([400]);
     expect(levelAtDepth(single, 400)?.depth_m).toBe(400);
     expect(levelAtDepth(single, 0)).toBeUndefined();
+  });
+});
+
+describe('which palette entry a source is drawn in', () => {
+  it('keys on the instrument, so the same one keeps its colour between two columns', () => {
+    // **The fault.** The palette used the source's position in the served `sources` array, and
+    // `contributions.ts` builds that array by first encounter while walking *this column's*
+    // levels. Two columns encounter differently, so the same physical instrument came out in one
+    // colour, dash and hatch in one column and another in the next — in a region whose premise is
+    // that a reader picks one square and then another.
+    const columnA = [source('a.cell-0', -11.4, 'temperature-050m'), source('b.cell-1', -11.0, 'temperature-200m')];
+    const columnB = [source('c.cell-2', -10.6, 'temperature-200m'), source('d.cell-3', -11.2, 'temperature-050m')];
+    // Encounter order differs; the instrument's slot does not.
+    expect(paletteSlots(columnA).hue).toEqual([0, 1]);
+    expect(paletteSlots(columnB).hue).toEqual([1, 0]);
+    const slotOf = (sources: AnalysisContributionsSource[], datastream: string) =>
+      paletteSlots(sources).hue[sources.findIndex((entry) => entry.datastream_id === datastream)];
+    for (const instrument of ['temperature-050m', 'temperature-200m']) {
+      expect(slotOf(columnA, instrument), `${instrument} changed colour between columns`).toBe(
+        slotOf(columnB, instrument),
+      );
+    }
+  });
+
+  it('gives two sources of one instrument its colour, and tells them apart by the ordinal', () => {
+    // The same instrument either side of a cell boundary is two sources and one instrument. They
+    // share the hue deliberately — the `·1`/`·2` ordinal and their positions are what separate
+    // them, which is what that ordinal was added for.
+    const twice = [
+      source('a.cell-0', -11.4, 'temperature-200m'),
+      source('b.cell-1', -11.0, 'temperature-050m'),
+      source('c.cell-2', -10.6, 'temperature-200m'),
+    ];
+    expect(paletteSlots(twice).hue).toEqual([1, 0, 1]);
+    // …and they are told apart *within* the column by dash and hatch, which step once per further
+    // source of that instrument. Colour alone would have drawn three adjacent bands of one bar
+    // identically, which is the defect the greyscale work exists against.
+    expect(paletteSlots(twice).texture).toEqual([1, 0, 2]);
+    expect(sourceLabels(twice)).toEqual(['temperature-200m ·1', 'temperature-050m', 'temperature-200m ·2']);
+  });
+
+  it('is a rank in the column’s own instruments, which is all the shell can promise', () => {
+    // A column that carries an instrument the other does not shifts the ranks below it, and no
+    // served document carries a list of every instrument in the run — so this is stated rather
+    // than claimed away. The swatch sits beside the instrument's name in the table.
+    const withExtra = [
+      source('a.cell-0', -11.4, 'ctd-cast'),
+      source('b.cell-1', -11.0, 'temperature-050m'),
+      source('c.cell-2', -10.6, 'temperature-200m'),
+    ];
+    expect(paletteSlots(withExtra).hue).toEqual([0, 1, 2]);
+  });
+});
+
+describe('a depth the document does not carry', () => {
+  it('is not the same fact as a level nothing reached, and the set says which', () => {
+    // Both come out as nought in every figure, which is why they were the same thing to every
+    // surface reading the set: `levels` is empty when no level matched, so the sums are zero and
+    // the caption printed "ω = 0.0000, the weight this cycle's observations added" about a level
+    // the document says nothing about — under the row's own sentence saying so.
+    const carried = document();
+    const missing = raysFor(carried, 333);
+    expect(missing.noSuchLevel).toBe(true);
+    expect(missing.observationWeight).toBe(0);
+    expect(missing.reachedCount).toBe(0);
+
+    // A level the document *does* carry, where nothing reached, is the other fact: same zeros,
+    // and the set does not claim the level is absent.
+    const empty: AnalysisContributions = {
+      ...carried,
+      levels: [{ ...carried.levels[0], reached: false, observation_weight: 0, remainder: 0, contributions: [] }],
+    };
+    const nothing = raysFor(empty, 0);
+    expect(nothing.noSuchLevel).toBe(false);
+    expect(nothing.observationWeight).toBe(0);
+
+    // And the whole column is never "no such level" — no depth was asked for.
+    expect(raysFor(carried).noSuchLevel).toBe(false);
   });
 });

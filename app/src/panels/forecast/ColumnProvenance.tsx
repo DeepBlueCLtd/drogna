@@ -43,7 +43,7 @@ import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '
 import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawableRays, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
-import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
+import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
 const MAP = { maxCells: 48, height: 190 };
@@ -246,12 +246,33 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
             measurement: [] as number[],
             model: [] as number[],
           };
+          // **One range per share, and a second writer is a fault rather than a silent
+          // overwrite.** `sourceOf` reads the segment after the last `_share_`, which discards
+          // the variable: `temperature_share_measurement` and `salinity_share_measurement` both
+          // resolve to `measurement`, and the loop's last writer won. The analyst serves one
+          // variable's provenance today and the master frames that as a size decision rather than
+          // a permanent one — so the day it serves two, the map would have drawn one variable's
+          // field under a legend naming the other, with nothing said. Refused instead, and named.
+          const claimed = new Map<SourceKey, string>();
+          const collided: string[] = [];
           for (const [name, range] of Object.entries(body.ranges ?? {})) {
             const key = sourceOf(name);
-            if (key && range.values) shares[key] = range.values;
+            if (!key || !range.values) continue;
+            const already = claimed.get(key);
+            if (already !== undefined) {
+              collided.push(`${already} and ${name} both read as the ${key} share`);
+              continue;
+            }
+            claimed.set(key, name);
+            shares[key] = range.values;
           }
-          setSlabRefusals([]);
-          setSlab({ depthM, longitudes, latitudes, shares });
+          if (collided.length > 0) {
+            setSlabRefusals([`the share field at ${depthM} m is ambiguous: ${collided.join('; ')}`]);
+            setSlab(undefined);
+          } else {
+            setSlabRefusals([]);
+            setSlab({ depthM, longitudes, latitudes, shares });
+          }
         }
       } catch (error) {
         if (!cancelled && token === wantedSlab.current) {
@@ -375,23 +396,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     return { cols, rows };
   }, [slab]);
 
-  /**
-   * `placeOn` lives in `rays.ts`, beside the arithmetic it belongs to, and this is the reason it
-   * moved there: it was a `useCallback` in this file — a pure function of three arguments that
-   * no unit test could reach — and its predecessor drew four of six rays as points. `rays.ts`
-   * opens by arguing that the thing the picture is a picture *of* must be testable on its own,
-   * and the one function that had just been got wrong was the one exempt from it.
-   */
-
-  /**
-   * The rays for the picked column, at the chosen level (FR-122, FR-128).
-   *
-   * Drawn on the surface plane and nowhere else: every one of these is a line between two
-   * points of the map above, and depth is answered by the profile beneath it. FR-122 rules a
-   * ray descending into the volume out on the grounds that it buys no explanation and costs a
-   * sorting problem against translucent geometry, and the geometry here cannot express one —
-   * there is no third coordinate to give it.
-   */
+  /** The served column, where one arrived and was not refused. */
   const served = typeof contributions === 'object' ? contributions : undefined;
 
   /**
@@ -408,6 +413,15 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    */
   const raySet = useMemo(() => (served ? raysFor(served, selectedLevel) : undefined), [served, selectedLevel]);
 
+  /**
+   * The rays for the picked column, at the chosen level, placed on the map (FR-122, FR-128).
+   *
+   * Drawn on the surface plane and nowhere else: every one of these is a line between two points
+   * of the map above, and depth is answered by the profile beneath it. FR-122 rules a ray
+   * descending into the volume out on the grounds that it buys no explanation and costs a sorting
+   * problem against translucent geometry, and the geometry here cannot express one — there is no
+   * third coordinate to give it.
+   */
   const rays = useMemo(() => {
     // `raySet` is defined exactly when `served` is, so `served` was a condition that could not be
     // independently true and a dependency the body never read; `const set = raySet` was a third
@@ -426,12 +440,19 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
       // search for and nothing to guard: the two spellings of a `findIndex` fallback this
       // replaced were both unreachable, and one of them passed −1 to `instrumentAt` on a path
       // that would have thrown.
-      return [{ ray, x: sourceX, y: sourceY, instrument: instrumentAt(ray.sourceIndex) }];
+      return [
+        {
+          ray,
+          x: sourceX,
+          y: sourceY,
+          // Hue from the instrument, dash from the source: see `Ray.paletteSlot` and `textureSlot`.
+          instrument: { ...instrumentAt(ray.textureSlot), hue: instrumentAt(ray.paletteSlot).hue },
+        },
+      ];
     });
-    return { set: raySet, from: { x, y }, drawn: drawnRays };
+    return { from: { x, y }, drawn: drawnRays };
   }, [raySet, slab, drawn, column]);
 
-  /** How many rays are at the width floor rather than at their own width (FR-122). */
   /**
    * How many rays are at the width floor rather than at their own width (FR-122).
    *
@@ -620,7 +641,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
               drawn.cols.map((sourceCol, col) => {
                 const shares = sharesAt(sourceRow, sourceCol);
                 const shown = showing === 'dominant' ? dominantAt(sourceRow, sourceCol) : { key: showing, value: shares[showing] };
-                const source = SOURCES.find((candidate) => candidate.key === shown.key) ?? SOURCES[0];
+                const source = shareOf(shown.key);
                 const magnitude = Number.isFinite(shown.value) ? Math.min(Math.abs(shown.value), 1) : 0;
                 const isHere = cursor?.row === row && cursor?.col === col;
                 return (

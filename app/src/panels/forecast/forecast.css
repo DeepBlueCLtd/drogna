@@ -733,14 +733,10 @@
   font-weight: 700;
 }
 
-/* A source that reached nothing at the chosen level has no width — its contribution is nought,
-   which is the bottom of the same scale — so this rule only dims whatever remains of the line's
-   cap. What actually keeps its place is the hollow origin marker below. (This comment used to
-   describe a constant hairline; that inverted the encoding and was removed.) */
-.forecast-ray.is-absent {
-  opacity: 0.35;
-}
-
+/* A source that reached nothing at the chosen level has no width to draw, so there is no stroke
+   here to style: `drawnWidthOf` returns 0 for it and the rule that used to sit here dimmed
+   whatever remained of the line's cap, which is nothing. What keeps such a source's place is its
+   origin marker, below, and that is where the styling for it lives. */
 /* A source that reached nothing at the chosen level has no width to draw — its contribution is
    nought, which is the bottom of the same scale — so what keeps its place is a hollow origin
    marker. A filled marker means "this source contributed here"; a hollow one means "this source

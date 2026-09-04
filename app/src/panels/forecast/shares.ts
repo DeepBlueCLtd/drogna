@@ -57,30 +57,51 @@ export const SOURCES = [
 export type SourceKey = (typeof SOURCES)[number]['key'];
 
 /**
+ * The declared share a key names.
+ *
+ * A total function over `SourceKey`, because that is what the type already guarantees: the call
+ * sites were `SOURCES.find((candidate) => candidate.key === key) ?? SOURCES[0]`, whose fallback
+ * is unreachable over a literal containing every key and is a second opinion about which share to
+ * draw if it were not. The `!` is the narrowing TypeScript cannot do over `find`, stated once here
+ * rather than papered over with a different share at every call site.
+ */
+export function shareOf(key: SourceKey): (typeof SOURCES)[number] {
+  return BY_KEY[key];
+}
+
+const BY_KEY = Object.fromEntries(SOURCES.map((source) => [source.key, source])) as Record<
+  SourceKey,
+  (typeof SOURCES)[number]
+>;
+
+/**
+ * The measurement share itself, the one the background is not.
+ *
+ * Through `shareOf`, so there is one spelling of "which share is measurement" in this file rather
+ * than three. It was `SOURCES.find(...) ?? SOURCES[0]` — an unreachable fallback that was a
+ * second opinion about which share to use if it were taken — and then `SOURCES[2]`, an index
+ * beside a sibling that names the same share by key, held in agreement by a test rather than by
+ * construction.
+ */
+export const MEASUREMENT = shareOf('measurement');
+
+/**
  * The three shares that are not measurement: the background a correction sits on (FR-125).
  *
  * Derived rather than restated. The list used to be written out again as three key strings, so
  * `SOURCES` and this had to be kept in step by hand, and the consumer then looked each key back
  * up in `SOURCES` through a `find` that could not miss.
  */
-export const BACKGROUND_SOURCES = SOURCES.filter((source) => source.key !== 'measurement');
+export const BACKGROUND_SOURCES = SOURCES.filter((source) => source !== MEASUREMENT);
 
-/**
- * The measurement share itself, the one the background is not.
- *
- * Indexed rather than searched with a fallback. `find(...) ?? SOURCES[0]` was the first spelling
- * and it shipped a new unreachable branch in the same change that removed one — `SOURCES` is a
- * literal that contains `measurement`, so the fallback could never be taken and was a second
- * opinion about which share to use if it were.
- */
-export const MEASUREMENT = SOURCES[2];
 
 /**
  * The instrument palette: hue, hatch angle and dash by position in the column's own source list.
  *
- * Six entries, and the count is a measurement rather than a guess — a cycle of the shipped
- * configuration produces four to six sources (specs/124 T001, measured with the holding in the
- * store). A seventh source would wrap, and `paletteExhausted` says so rather than letting two
+ * Six entries, and the count is a measurement rather than a guess — a cycle produces four to six
+ * sources on the **loitering** condition (specs/124 T001, measured with the holding in the store).
+ * Naming the condition rather than "the shipped configuration": this change cites three different
+ * ones as that, and a source count is a fact about a platform's behaviour, not about the build. A seventh source would wrap, and `paletteExhausted` says so rather than letting two
  * instruments quietly share a colour; the region prints the warning where a reader sees it.
  *
  * **The hues are an ordered luminance ramp, and that took two corrections.** The first palette
@@ -92,6 +113,14 @@ export const MEASUREMENT = SOURCES[2];
  * the ground and not the palette — a hue must clear 3:1 on `--shell-bg` before it can be the
  * bottom of anything — and these six climb from there, 0.147 to 0.751, no pair below 1.23 and
  * nothing below 3.44 against the surface it is drawn on.
+ *
+ * **Those figures are of the declared hue, not of the drawn pixel, and the difference is Q-01.**
+ * The region composites: map cells at `fill-opacity` 0.15–1.0, pattern washes at 0.45, profile
+ * bands under a `rgba(0,0,0,0.55)` stripe, the earlier-cycles band at 0.55 opacity. A bound on
+ * the undimmed hue is a necessary condition for the drawn one and not the same measurement, and
+ * nothing here claims otherwise: whether six hatched hues separate in greyscale *as drawn* is the
+ * question a capture answers and a number in a comment cannot, and T030 is the task that takes
+ * it.
  *
  * Six ordered steps cannot each clear a contrast of 3 against its neighbour — that would need a
  * luminance range no screen has — so the ramp is what colour can honestly carry, and identity is
@@ -110,9 +139,21 @@ export const INSTRUMENTS = [
   { hue: '#e7e2bd', angle: 150, dash: '1 3' },
 ] as const;
 
+/**
+ * The angle the remainder band's stripe is drawn at, declared here so the check that holds the
+ * hatch vocabularies apart can see it.
+ *
+ * It lives in `forecast.css` and it is **135°** — an odd multiple of 15, which is the series the
+ * four shares occupy. A fifth share would have been given 135° by the same rule that gave the
+ * first four theirs, and would have collided with the remainder band *in the same stacked bar*,
+ * while the check written to prevent exactly that reported clean. Nothing on disk reserved it.
+ */
+export const REMAINDER_ANGLE = 135;
+
 export function instrumentAt(index: number): (typeof INSTRUMENTS)[number] {
   return INSTRUMENTS[index % INSTRUMENTS.length];
 }
+
 
 /** True once a column carries more sources than the palette has distinct entries. */
 export function paletteExhausted(sourceCount: number): boolean {

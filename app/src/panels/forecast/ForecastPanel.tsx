@@ -66,6 +66,9 @@ import './forecast.css';
  * The two feature 124 will fill are listed here already: they are regions of this view now,
  * and what they say is part of what the view says.
  */
+/** How many failed inventory fetches the depth axis is retried over before the region gives up. */
+const GRID_ATTEMPTS = 3;
+
 export const FORECAST_REGIONS = [
   { id: 'indicator', label: 'why a run is warranted, and what one costs', element: '[data-region="indicator"]' },
   { id: 'volume', label: 'what a cell’s value was made from', element: '[data-region="volume"]' },
@@ -196,6 +199,11 @@ export function ForecastPanel({ params }: PanelProps) {
    * standing restatement — which carries the same collection names — asks for nothing.
    */
   const gridForRef = useRef<string | undefined>(undefined);
+  /**
+   * How many times the depth axis has been asked for and not got. The allowance is small because
+   * the thing it bounds is a retry on the analyst's restatement cadence, not a user action.
+   */
+  const attemptsRef = useRef(0);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
@@ -369,7 +377,16 @@ export function ForecastPanel({ params }: PanelProps) {
   useEffect(() => {
     const named = analysis?.collections.analysis;
     if (!named || gridForRef.current === named) return;
+    // **Bounded, because a retry clocked by restatements is a fetch on a cadence.** On a failed
+    // inventory fetch `gridForRef` is never set, so the next standing restatement asks again —
+    // which is right once or twice and is, with the endpoint down, one fetch every
+    // `restate_every_ticks` for the life of the tab, unbacked-off and invisible. The region's own
+    // header two files away says "not on a tick, not on an announcement, not on a timer", and the
+    // sibling slab effect was corrected against that sentence in this same series. After the
+    // allowance the chooser stays undrawn and the region says so, which is the honest end.
+    if (attemptsRef.current >= GRID_ATTEMPTS) return;
     let cancelled = false;
+    attemptsRef.current += 1;
     void (async () => {
       try {
         const response = await fetch(config.endpoints.holdings);
@@ -377,11 +394,16 @@ export function ForecastPanel({ params }: PanelProps) {
         const body: unknown = await response.json();
         if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
         const grid = gridForAnalysis(body as HoldingsInventory, analysis);
+        // A cycle whose axis is not in the inventory yet is not a failure of this fetch, so it
+        // does not spend the allowance: the attempt is counted before the request and given back
+        // here, and only a fetch that answered nothing usable leaves it spent.
         if (!grid) return;
         gridForRef.current = named;
+        attemptsRef.current = 0;
         setColumnGrid(grid);
       } catch {
-        // Left for the next cycle to ask again; a chooser over no axis is drawn as absent.
+        // Left for the next restatement to ask again, within the allowance above; a chooser over
+        // no axis is drawn as absent.
       }
     })();
     return () => {

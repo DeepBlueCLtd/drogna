@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A new drawing of the thermocline came out as a plane, and its caption said so instead of calling it a surface. That sentence found a bug — not in the drawing, and not in the grid everyone blamed first, but in the synthetic ocean itself.">
+<title>The drawing was honest and the ocean was flat — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-drawing-was-honest-and-the-ocean-was-flat">The drawing was honest and the ocean was flat</h1>
+<h2 id="the-background">The background</h2>
+<p>The thermocline is the depth where the sea's temperature falls away fastest, and sound
+bends at it. Where it sits is not one number: it domes over cold water and is pressed down
+under warm, and that shape is what a sonar operator asks about. We drew it as a surface,
+one depth per column. It came out flat.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>The drawing had to show shape and, more importantly, say what it found rather than what it
+was meant to. It printed the count — 7,679 of 7,680 columns at one depth — and blamed the
+grid rather than the ocean.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>That sentence was half right, and being specific exposed the other half. The obvious fix
+was a finer depth axis — six levels over a kilometre cannot see a 30-metre layer. But
+sampling from 200 metres down to 10 gave one depth every time. The thermocline function
+took no position: flat by construction, with no shape to resolve.</p>
+<p>So the ocean gained one, and it taught us something. Letting the ocean front move the layer
+tilted the whole domain, and the harness still could not find a drifting eddy it had been
+missing — the feature-finders read the structure we had just added. Move the layer with the
+local features only and the eddy is found. A basin-wide tilt fails the same way: shape and
+feature-finding compete for one signal.</p>
+<h2 id="the-demo">The demo</h2>
+<p><img src="../../assets/124-the-ocean-was-flat.png" alt="The forecast tab's volume: twenty-six semi-transparent levels of sound speed drawn as a
+box with depth exaggerated, and a pale sheet running through the upper part of it — the
+thermocline surface, placed per column — with a scattered trail of marks deeper down where
+a column's steepest fall is somewhere else entirely. The caption beneath counts 1,920
+columns over thirteen distinct depths, level to within one 40-metre level."></p>
+<p><a href="../../../instances/main/#/view/forecast">Open the forecast tab</a> — run the clock forward,
+pick a column, press &quot;show the volume&quot;. The caption counts what it found and names what it
+cannot tell: the analysis it reads is noisy enough that the count would look the same on a
+flat ocean. Saying so beats claiming the win — the habit that started this.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

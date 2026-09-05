@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0044: the thermocline is a surface in the world, not only in the drawing — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0044-the-thermocline-is-a-surface-in-the-world-not-only-in-the-drawing">ADR-0044: the thermocline is a surface in the world, not only in the drawing</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 4 September 2026
+<strong>Feature:</strong> 124 (the forecast tab), raised from it as issue #113
+<strong>Requirements:</strong> SRD-v2 FR-120
+<strong>Engages:</strong> Constitution VII (no false illumination); Constitution IX (the manifest is
+sufficient); ADR-0002 (the evaluated form is what reaches a consumer); the
+<code>analytic_form_version</code> contract in <code>manifest.schema.json</code></p>
+<h2 id="context">Context</h2>
+<p>FR-120 asks for the thermocline as a <strong>surface</strong> through a semi-transparent volume, and
+puts its reason in the requirement rather than leaving it to be inferred: &quot;a surface is
+required rather than a depth slice because the thermocline domes, tilts and breaks, and
+shape is the answer a sonar user is asking for.&quot;</p>
+<p>Feature 124 drew that surface — per column, from the served field, using the run's own
+definition of where a profile falls fastest — and captioned what it found rather than what
+it wanted. What it found was a plane: 7,679 of 7,680 columns placed the thermocline at
+100 m and one at 300 m. The caption said so, which is the only reason the next question
+got asked.</p>
+<p>The obvious diagnosis was the depth axis. Six levels over a kilometre is 200 m of spacing
+against a layer authored 30 m thick, and the manifest already published that ratio as 0.15;
+<code>model-runner/features.ts</code> already said in as many words that &quot;a 200 m grid cannot see a
+30 m layer&quot;. Raising the resolution looked like the whole answer.</p>
+<p>It was not the answer at all, and the measurement is the reason this ADR exists rather
+than a configuration commit. Sampling the analytic true ocean over the same 7,680 columns
+at 200, 100, 50, 40, 25 and 10 m spacing gives <strong>one distinct thermocline depth at every
+one of them</strong>. At 20 m spacing the winning level pair beats the runner-up by 13.7 % to
+17.3 % in every column in the domain; the eddy's centre and the far field pick the same
+depth. Nothing available was going to tilt it.</p>
+<p><code>thermoclineAnomalyT(parameters, depthM)</code> took no longitude and no latitude. The authored
+thermocline was one scalar depth for the whole world. <strong>FR-120's rationale described
+something the harness did not contain</strong>, and no drawing at any resolution could have shown
+it, because there was nothing there to resolve.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>The analytic form gains a displacement term, and becomes version 2. The features that
+warm and cool the water also move the layer.</strong></p>
+<p><code>thermoclineDepthAt(world, longitude, latitude, seconds)</code> returns the layer's depth at a
+place: the authored <code>depth_m</code> plus <code>displacement_m_per_c</code> times the eddy and moving
+anomalies evaluated <strong>at that nominal depth</strong>. The three thermocline terms take that local
+depth as an argument instead of reading <code>depth_m</code> themselves.</p>
+<p>Four parts of that were arguable, and the fourth was found by measurement rather than
+thought.</p>
+<h3 id="the-anomalies-are-read-at-the-layers-nominal-depth-not-at-the-depth-being-sampled">The anomalies are read at the layer's nominal depth, not at the depth being sampled</h3>
+<p>A layer's depth is a property of the place. Reading the anomaly at the depth being asked
+about would put the layer somewhere different for every sample taken down one column,
+which is not a surface. <code>depth_m</code> is the one depth every column shares, so it is the one
+that can be asked at — and it keeps the term out of a loop, since the eddy, front and
+moving anomalies never read the thermocline.</p>
+<h3 id="one-coefficient-not-one-per-feature">One coefficient, not one per feature</h3>
+<p>A displacement per feature would have been three parameters and three schema amendments,
+and would have let the eddy's doming and the front's tilt be tuned apart. They should not
+be: the physical coupling is the background stratification, which is one property of the
+water, and a warm anomaly of a given size displaces an isopycnal by an amount that
+does not depend on which feature made it. One coefficient also means the demo cannot be
+tuned into a shape the composition rule does not imply.</p>
+<h3 id="the-argument-is-not-defaulted">The argument is not defaulted</h3>
+<p><code>thermoclineAnomalyT(p, depthM, layerDepthM)</code> could have defaulted its third argument to
+<code>p.depth_m</code>. A caller that forgot it would then silently get form 1's flat field back —
+which is the exact fault this version exists to remove, arriving quietly. It is required.</p>
+<h3 id="the-front-does-not-displace-the-layer-and-this-was-not-the-first-answer">The front does not displace the layer, and this was not the first answer</h3>
+<p>The first version used all three features, on the obvious argument that every anomaly
+should move the layer. The front's anomaly is a <code>tanh</code>. It <em>saturates</em> rather than
+decaying, so as a displacement it does not tilt the layer near the front — it holds one
+half of the domain permanently deep and the other permanently shallow, out to the corners.
+The eddy and the drifting feature use radial Gaussians that fall to nothing, which is what
+a local displacement has to do.</p>
+<p>The estimators said so before the argument was finished. Recovering the drifting feature's
+centre, error in km against its own 40 km radius. Every figure is printed by
+<code>features.test.ts</code> over the seeds that file runs, so the table reproduces by being the
+test's own output — an earlier draft of it was taken from a standalone probe, quoted a
+seed the repository does not contain, and did not reproduce, which is what a measurement
+that lives beside the thing it measures is for:</p>
+<table>
+<thead>
+<tr>
+<th>terms, at the shipped 20 m/°C</th>
+<th>1234</th>
+<th>1180001</th>
+<th>1180002</th>
+<th>1180003</th>
+<th>1180004</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none (analytic form 1)</td>
+<td>3.1</td>
+<td>9.7</td>
+<td>20.5</td>
+<td>7.0</td>
+<td><em>declined</em></td>
+</tr>
+<tr>
+<td>eddy, front and moving</td>
+<td>3.1</td>
+<td>8.8</td>
+<td>17.6</td>
+<td>5.4</td>
+<td><em>declined</em></td>
+</tr>
+<tr>
+<td>eddy and moving (shipped)</td>
+<td><strong>2.4</strong></td>
+<td><strong>8.3</strong></td>
+<td><strong>14.5</strong></td>
+<td><strong>4.7</strong></td>
+<td><strong>3.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p>A global cold half and warm half at the layer's depth is a blob the size of the domain, and
+a blob estimator finds it. Dropping the front is better on every seed, and on 1180004 —
+<code>returning</code>'s own — it is the difference between a position and a refusal: with the front
+displacing, the estimator declines there exactly as form 1 does. The front's own horizontal
+step is already in the field through <code>frontAnomalyT</code>; stepping the layer with it as well was
+double-counting the one feature that needs no help being seen.</p>
+<p><strong>And the coefficient is 20 m/°C because that is where the front's own anchor still lands.</strong>
+With the front excluded, 30 and 40 m/°C both recover the drifting feature better still —
+1.9 km on 1180004 — and both put seed 1180003's front anchor outside its 30 km bound. The
+layer's shape and the front's position are read off the same horizontal structure, so buying
+more of one spends the other; the last section of this ADR is that tension at full size.</p>
+<h2 id="the-depth-axis-moves-too-and-pays-for-itself">The depth axis moves too, and pays for itself</h2>
+<p>Form 2 gives the layer 69 m of relief across the domain, and a pick quantised to level
+midpoints needs spacing fine enough to carry it. Six levels still show one depth. The
+axis goes to <strong>26 levels, 40 m apart</strong> — the layer-to-spacing ratio the manifest publishes
+rises from 0.15 to 0.75.</p>
+<p><strong>The doming is local, and the drawing says so rather than being made to look otherwise.</strong>
+The two features that displace the layer are tens of kilometres across in a domain hundreds
+wide, so most of the field is level: over the now-cast the surface takes three distinct
+depths, 1,831 of 1,920 columns at 100 m with 48 at 140 m and 41 at 60 m. That is what an
+eddy does to a thermocline, and it is not the domain-wide undulation the first version
+produced by letting the front step the whole field. Over a served <strong>analysis</strong> it is looser,
+which is worth stating because the drawing draws an analysis and not the truth — thirteen
+depths, 82% at 100 m, two holding ninety-four per cent inside 40 m.</p>
+<p><code>Volume.tsx</code> prints the count and, on the shipped configuration, the level it is level to
+within — its other branch, which names the modal share, is for a field whose commonest depths
+span more than one level and nothing ships in that state. It was first written to print max
+minus min and call the result doming, which against one analysis read &quot;16 distinct depths
+spanning 840 m&quot; — true of two columns and false of the layer, and the same fault as form 1's
+arriving from the other direction.</p>
+<p><strong>And it attributes nothing.</strong> The count it prints is four with the displacement and four
+without, because the analysis it reads carries assimilation scatter that moves a weakly-held
+column's steepest pair on its own; only over the truth field does the count separate the two
+forms (three against one). So the caption says where each column's gradient sits and says it
+cannot tell a displaced layer from an unsure column — and the proof of the shape is a unit
+test over the manifest, not a picture.</p>
+<p>Depth multiplies against the horizontal, and the horizontal was generous: 96 × 80 over the
+domain is 5.3 km cells against an eddy of 64 km radius, twelve cells across its radius. The
+now-cast grid becomes <strong>48 × 40 × 26</strong>. The eddy keeps six cells across its radius and the
+front, the tightest horizontal feature, keeps 2.8 cells across its sharpness — about eleven
+across its full transition. The committed artefacts go from 27.7 MB to 30.4 MB and the
+rebuild from 17 s to 20 s, which is the whole cost of the change.</p>
+<p>The alternative costs were measured rather than assumed, because the obvious one was
+ruinous: keeping 96 × 80 and adding depth alone takes the artefacts to <strong>115.7 MB</strong>, with
+<code>returning</code> alone at 49 MB, and the snapshot codec already gzips with a byte-plane shuffle,
+so that is a floor rather than a starting point.</p>
+<h2 id="consequences">Consequences</h2>
+<p>Every stored field changes, every manifest changes, and the four seed artefacts were
+rebuilt by <code>pnpm snapshots</code> under <code>check-snapshot-drift</code>. <code>ANALYTIC_FORM_VERSION</code> is 2, and
+a reader that understands only form 1 must refuse the new manifests rather than reconstruct
+a flat layer from them — which is what the version exists for.</p>
+<p><strong>Nothing was enforcing that</strong>, which the bump exposed: <code>lib/manifest-world.ts</code> cast a manifest
+to a world without looking at the number, so a form 1 document would have produced
+<code>depth_m + undefined × anomaly</code> — <code>NaN</code> at every point in the domain, with no reason given
+anywhere. It now refuses, in both directions, and <code>manifest-world.test.ts</code> watches the refusal
+fail as well as pass. The protection the master describes is a mechanism rather than a sentence
+for the first time.</p>
+<p>Two manifests carried <code>analytic_form_version: 1</code> as a typed literal while spreading the
+env-generator's manifest wholesale: the analyst's and the model runner's. The bump made
+them wrong — form 2 thermocline parameters under a form 1 label, telling a reader it could
+reconstruct a doming layer with the flat rule. Both now take the number from the manifest
+they spread, so the next bump cannot leave them behind.</p>
+<p>FR-120 is <strong>not amended</strong>. That was the second option issue #113 offered and it was the
+wrong one: the requirement described the ocean correctly and the harness did not contain
+it. <code>CLAUDE.md</code> warns that a specification disagreeing with the code is right about four
+times in five, and this was one of the four.</p>
+<p>What the drawing says about itself is unchanged in kind. <code>Volume.tsx</code> still measures the
+distinct-depth count in the field it was served and still states it, and still says the
+field is level when it finds it so — with the spacing read off the levels rather than
+typed, because that sentence said &quot;200 m&quot; while the axis was being changed to 40 m.</p>
+<h2 id="what-this-does-not-deliver-and-why-it-is-here-rather-than-in-a-follow-up">What this does not deliver, and why it is here rather than in a follow-up</h2>
+<p>FR-120's rationale is that the thermocline &quot;domes, tilts and breaks&quot;. Form 2 delivers the
+doming and the breaking, both local. It does <strong>not</strong> deliver a domain-wide tilt, and the
+attempt to add one is the reason this section exists rather than an issue saying &quot;next
+time&quot;.</p>
+<p>Two shapes were tried and both failed for the same reason. The front's <code>tanh</code> step is
+recorded above. A smooth basin-scale ramp — <code>depth_m + tilt × (latitude − mid)</code>, which is
+what actually sets thermocline depth at basin scale and has no localised extremum for a
+blob estimator to catch on — gives exactly the broad shape wanted: at 20 m per degree the
+surface takes four distinct depths, the commonest three spanning 80 m, and the modal share
+falls from 95% to 41%. It also puts seed 1180003's front anchor 74 km across against its
+30 km bound, at every tilt tried down to 10 m per degree.</p>
+<p><strong>The tension is structural, not a bug in either.</strong> <code>model-runner/features.ts</code> locates all
+three features by horizontal temperature structure, and a thermocline whose depth varies
+horizontally <em>is</em> horizontal temperature structure at the depths near the layer. Broad
+layer shape and estimator bounds derived from the authoring jitter are competing for the
+same signal. Resolving it needs one of: an estimator that reads the depth structure rather
+than the depth-averaged anomaly, bounds that account for a sloping layer, or a decision
+that the demo prefers the shape to the scores. All three are larger than this change and
+none is a panel's or a data commit's to take.</p>
+<p>So the surface domes where a feature displaces it and is level elsewhere, the drawing
+counts and states both, and the requirement's third verb is unmet with the measurement on
+the record.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

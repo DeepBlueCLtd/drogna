@@ -34,7 +34,8 @@ import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { spreadHoldingIdFor, standingRunFacts } from '../lib/standing-run.js';
 import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
-import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
+import { KM_PER_DEGREE_LATITUDE } from '../env-generator/analytic.js';
+import { insideSoundSpeedValidity } from '../../seam/ocean-relations.js';
 import { publicationFault } from '../coverage-store/store.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import { shallowTwoLayerKernel, shiftAdvectKernel, type KernelParameters, type ModelKernel } from './kernel.js';
@@ -738,7 +739,17 @@ export class ModelRunner {
 
     const manifest: Manifest = {
       ...baseManifest,
-      generator: { name: 'drogna-model-runner', version: '2.0.0', analytic_form_version: 1 },
+      // The form version travels with the parameters, and the parameters come from the
+      // manifest spread above. Typed here it was correct only while there was one form:
+      // the moment the env-generator reached form 2 (#113) this document would have
+      // carried form 2's thermocline parameters under a form 1 label, telling a reader it
+      // could reconstruct a doming layer with the flat rule. Read from the base and it
+      // cannot drift again.
+      generator: {
+        name: 'drogna-model-runner',
+        version: '2.0.0',
+        analytic_form_version: baseManifest.generator.analytic_form_version,
+      },
       config_digest: configDigest(this.config),
       seed: {
         root: this.rootSeed,

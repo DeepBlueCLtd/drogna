@@ -47,7 +47,7 @@ import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { fnv1a32 } from '../lib/rng.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
-import { pressureDbar } from '../env-generator/analytic.js';
+import { pressureDbar } from '../../seam/ocean-relations.js';
 
 /** The honest port to the true ocean (Constitution VI): truth in, nothing else out. */
 export interface WorldSampler {

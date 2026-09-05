@@ -99,7 +99,7 @@ generator that runs on its own.
 
 The source's §2.6 states the grid as 96 × 96 across 8 depth zones and the platform as
 reaching the top three. The tree says otherwise: `app/config/run.json` declares a now-cast
-grid of 96 × 80 × 6 over a domain 0–1000 m deep, and the platform's declared limit is
+grid of 48 × 40 × 26 over a domain 0–1000 m deep, and the platform's declared limit is
 400 m. The shape of the requirement — *the vessel reaches the top of the water column and
 the rest is forecast but unreachable* — survives exactly; the figures do not, and this
 specification takes the tree (CLAUDE.md, lesson 1).

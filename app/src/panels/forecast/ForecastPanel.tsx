@@ -716,6 +716,18 @@ export function ForecastPanel({ params }: PanelProps) {
       </header>
 
       <div className="forecast-regions">
+        {/* **The left column is one cell holding two regions, so the run list is on screen.**
+            The list was a full-width section below the grid, and the region beside it — the share
+            map, the volume and the depth profile — is tall enough that a reader had to scroll
+            past all of it to reach the thing that says what the loop has been doing. "Why now" is
+            short and leaves most of this column empty, which is the space the list now occupies.
+            A reader reported it: easily pushed out of sight.
+
+            One cell rather than a fourth grid track, because `auto-fit` would have given the list
+            a column of its own at wide widths and put it beside "Why now" rather than beneath it.
+            At a phone's width the grid is one track and the two simply stack, which is the order
+            they are written in. */}
+        <div className="forecast-stack">
         <section className="forecast-region" data-region="indicator" aria-label="why a run is warranted, and what one costs">
           <h3>Why now</h3>
           {indicator === undefined ? (
@@ -742,6 +754,81 @@ export function ForecastPanel({ params }: PanelProps) {
             )}
           </p>
         </section>
+
+      <section className="forecast-region" data-region="timeline" aria-label="the runs, in simulation time, labelled by cause">
+          <h3>Runs, in simulation time</h3>
+          {ordered.length === 0 ? (
+            <p className="not-landed">
+              no run has been announced yet. Nothing here is drawn from a configured expectation: this list is what
+              arrived.
+            </p>
+          ) : (
+            <ol className="forecast-timeline">
+              {ordered.map((entry) => (
+                <li key={entry.key}>
+                  <button
+                    type="button"
+                    className={`forecast-run forecast-run-${entry.kind}${entry.key === selected ? ' is-selected' : ''}`}
+                    aria-pressed={entry.key === selected}
+                    onClick={() => select(entry.key === selected ? undefined : entry.key)}
+                  >
+                    <span className="forecast-run-tick">tick {entry.tick}</span>
+                    {/* The mark is a shape as well as a colour: colour alone would not
+                        survive greyscale, and the cause is the fact this list is for. */}
+                    <span className={`forecast-run-mark forecast-mark-${entry.kind}`} aria-hidden="true">
+                      {entry.kind === 'held' ? '⌛' : '▶'}
+                    </span>
+                    <span className="forecast-run-cause">{CAUSE_LABEL[entry.cause] ?? entry.cause}</span>
+                    <span className="forecast-run-detail">
+                      {entry.kind === 'held'
+                        ? `${entry.shortfallTicks ?? 0} tick(s) of validity still to decay`
+                        : entry.abandoned !== undefined
+                          ? 'never published: the runner gave it up'
+                          : entry.costTicks === undefined
+                          ? 'in the store; what asked for it is not recoverable from a holding'
+                          : entry.publishedAtTick === undefined
+                            ? `occupying ${entry.costTicks} tick(s)`
+                            : `published at tick ${entry.publishedAtTick}, ${
+                                entry.publishedAtTick - entry.tick
+                              } tick(s) after it began`}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+          {chosen && (
+            <p className="forecast-selected" data-testid="forecast-selected">
+              {chosen.kind === 'held' ? (
+                <>{chosen.detail}</>
+              ) : (
+                chosen.costTicks === undefined ? (
+                <>
+                  Run <code>{chosen.runId}</code> was published at {displayInstant(chosen.simTime)}, before this console
+                  opened. It is in the store and it can be queried; what asked for it, and what it cost, were said on the
+                  wire at the time and are not recoverable from the holding.
+                </>
+              ) : (
+                <>
+                  Run <code>{chosen.runId}</code>, announced at {displayInstant(chosen.simTime)}. It declared a cost of{' '}
+                  {chosen.costTicks} tick(s), and{' '}
+                  {chosen.subStepsPerStep === null || chosen.subStepsPerStep === undefined
+                    ? 'the kernel that ran integrates nothing, so it reported no sub-steps at all — a different answer from one'
+                    : `the grid it was handed required ${chosen.subStepsPerStep} integration sub-step(s) per forecast step`}
+                  . A declared figure and a reported one, and they are not the same kind of claim.
+                </>
+              )
+              )}
+            </p>
+          )}
+          {refused > 0 && (
+            <p className="forecast-refused">
+              {refused} message(s) were refused by their masters and are not drawn. Counted rather than discarded: a
+              display quietly dropping traffic is the other way to lie.
+            </p>
+          )}
+        </section>
+        </div>
 
         <section className="forecast-region" data-region="volume" aria-label="what a cell’s value was made from">
           <h3>What it is made from</h3>
@@ -776,79 +863,6 @@ export function ForecastPanel({ params }: PanelProps) {
         </section>
       </div>
 
-      <section className="forecast-region" data-region="timeline" aria-label="the runs, in simulation time, labelled by cause">
-        <h3>Runs, in simulation time</h3>
-        {ordered.length === 0 ? (
-          <p className="not-landed">
-            no run has been announced yet. Nothing here is drawn from a configured expectation: this list is what
-            arrived.
-          </p>
-        ) : (
-          <ol className="forecast-timeline">
-            {ordered.map((entry) => (
-              <li key={entry.key}>
-                <button
-                  type="button"
-                  className={`forecast-run forecast-run-${entry.kind}${entry.key === selected ? ' is-selected' : ''}`}
-                  aria-pressed={entry.key === selected}
-                  onClick={() => select(entry.key === selected ? undefined : entry.key)}
-                >
-                  <span className="forecast-run-tick">tick {entry.tick}</span>
-                  {/* The mark is a shape as well as a colour: colour alone would not
-                      survive greyscale, and the cause is the fact this list is for. */}
-                  <span className={`forecast-run-mark forecast-mark-${entry.kind}`} aria-hidden="true">
-                    {entry.kind === 'held' ? '⌛' : '▶'}
-                  </span>
-                  <span className="forecast-run-cause">{CAUSE_LABEL[entry.cause] ?? entry.cause}</span>
-                  <span className="forecast-run-detail">
-                    {entry.kind === 'held'
-                      ? `${entry.shortfallTicks ?? 0} tick(s) of validity still to decay`
-                      : entry.abandoned !== undefined
-                        ? 'never published: the runner gave it up'
-                        : entry.costTicks === undefined
-                        ? 'in the store; what asked for it is not recoverable from a holding'
-                        : entry.publishedAtTick === undefined
-                          ? `occupying ${entry.costTicks} tick(s)`
-                          : `published at tick ${entry.publishedAtTick}, ${
-                              entry.publishedAtTick - entry.tick
-                            } tick(s) after it began`}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        )}
-        {chosen && (
-          <p className="forecast-selected" data-testid="forecast-selected">
-            {chosen.kind === 'held' ? (
-              <>{chosen.detail}</>
-            ) : (
-              chosen.costTicks === undefined ? (
-              <>
-                Run <code>{chosen.runId}</code> was published at {displayInstant(chosen.simTime)}, before this console
-                opened. It is in the store and it can be queried; what asked for it, and what it cost, were said on the
-                wire at the time and are not recoverable from the holding.
-              </>
-            ) : (
-              <>
-                Run <code>{chosen.runId}</code>, announced at {displayInstant(chosen.simTime)}. It declared a cost of{' '}
-                {chosen.costTicks} tick(s), and{' '}
-                {chosen.subStepsPerStep === null || chosen.subStepsPerStep === undefined
-                  ? 'the kernel that ran integrates nothing, so it reported no sub-steps at all — a different answer from one'
-                  : `the grid it was handed required ${chosen.subStepsPerStep} integration sub-step(s) per forecast step`}
-                . A declared figure and a reported one, and they are not the same kind of claim.
-              </>
-            )
-            )}
-          </p>
-        )}
-        {refused > 0 && (
-          <p className="forecast-refused">
-            {refused} message(s) were refused by their masters and are not drawn. Counted rather than discarded: a
-            display quietly dropping traffic is the other way to lie.
-          </p>
-        )}
-      </section>
     </div>
   );
 }

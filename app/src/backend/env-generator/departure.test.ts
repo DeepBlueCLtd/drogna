@@ -55,13 +55,38 @@ describe('the departure brief (feature 121)', () => {
     // world at each step would differ here, and the eddy and the moving feature are
     // both live over this window, so the difference would be real rather than a
     // rounding artefact.
+    /*
+     * Counted, then asserted once. An `expect` per cell was a million assertions the moment the
+     * depth axis was raised (#113) and timed this test out; it also reported only the first
+     * offender, where the *number* that drifted says whether one cell moved or the whole brief was
+     * re-evaluated — which is the difference this test is about.
+     *
+     * The count of drifts is uncapped for that reason; only the examples are capped, because four
+     * are enough to read and a million are not. An earlier version asserted the number of
+     * *comparisons* instead, which is the loop's own bounds restated and true for every input —
+     * a line that looks like a check and cannot fail.
+     */
+    let drifts = 0;
+    const examples: string[] = [];
     for (let variable = 0; variable < grid.time.count * perStep * 2; variable += grid.time.count * perStep) {
       for (let step = 1; step < grid.time.count; step++) {
         for (let cell = 0; cell < perStep; cell++) {
-          expect(values[variable + step * perStep + cell]).toBe(values[variable + cell]);
+          const held = values[variable + step * perStep + cell];
+          const issued = values[variable + cell];
+          if (held === issued) continue;
+          drifts += 1;
+          if (examples.length < 4) examples.push(`step ${step} cell ${cell}: ${held} != ${issued}`);
         }
       }
     }
+    // The brief has to have something in it to hold: a zero-step or empty grid would pass the
+    // drift assertion by having nothing to compare, which is the vacuous pass to guard against.
+    expect(grid.time.count, 'a brief with one step holds nothing across steps').toBeGreaterThan(1);
+    expect(perStep).toBeGreaterThan(0);
+    expect(
+      { drifts, examples },
+      `${drifts} of ${2 * (grid.time.count - 1) * perStep} held values differ from the one they were issued with`,
+    ).toEqual({ drifts: 0, examples: [] });
     runtime.stop();
   });
 

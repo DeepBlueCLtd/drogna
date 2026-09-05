@@ -64,9 +64,21 @@ import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale, withinWindow } from './rays.js';
 import { useMapView, ZOOM_STEP, type ViewRect } from '../map-view.js';
+import { Volume } from './lazy.js';
+import { VOLUME_PARAMETERS, type VolumeParameter } from './volume.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
-/** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
+/**
+  * The map's drawn resolution: what a panel can show legibly, whatever the field's own width.
+  *
+  * **It is a ceiling, and on the shipped configuration the field is exactly at it.** The now-cast
+  * was 96×80 when the zoom was built, so half the analyst's columns were thinned away at rest and
+  * coming closer genuinely revealed cells; #113 spent that horizontal resolution on depth and the
+  * field is 48 wide, which fits whole. The apparatus below is unchanged and correct — it is the
+  * general rule, and it starts working again the moment the field outgrows the panel — but a
+  * reader zooming today gets bigger squares, not more of them, and the notes here say so rather
+  * than promising a resolution that is already on the screen.
+  */
 const MAP = { maxCells: 48, height: 190 };
 
 /**
@@ -251,6 +263,25 @@ export function ColumnProvenance({
   const [showing, setShowing] = useState<SourceKey | 'dominant'>('dominant');
   const [slab, setSlab] = useState<Slab | undefined>();
   const [column, setColumn] = useState<Column | undefined>();
+  /**
+   * Whether the volume is open, and which parameter it draws (T008, T012).
+   *
+   * **Closed at rest, and that is the code-split's whole point.** The volume is this tab's only
+   * deck.gl surface and that stack is about a third of the bundle; `lazy.tsx` withholds it, so
+   * opening the Forecast tab costs what it always cost and opening a volume costs what a volume
+   * costs. A volume mounted by default would pull the chunk on every visit and undo the deferral.
+   *
+   * **The parameter defaults to sound speed, which it could not do until the relation moved.** An
+   * analysis holding carries temperature and salinity only — sound speed is derived from the pair,
+   * and ADR-0005 makes that derivation "the single implementation in drogna", so a second one in
+   * this panel was ruled out by a decision already taken rather than by taste. The control
+   * therefore shipped offering only what is served, with the reason recorded, and T012 named the
+   * three ways out. The first of them was taken: `soundSpeedMs` now lives in
+   * `seam/ocean-relations.ts`, reachable from both halves, and a panel evaluating the seam's own
+   * declared relation over served values is the point of use ADR-0005 describes.
+   */
+  const [volumeOpen, setVolumeOpen] = useState(false);
+  const [volumeParameter, setVolumeParameter] = useState<VolumeParameter>('sound_speed');
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
   /**
    * The served column, or which of the two ways it is not here. FR-129 names three facts and a
@@ -541,11 +572,13 @@ export function ColumnProvenance({
     if (!slab || slab.longitudes.length === 0 || slab.latitudes.length === 0) return undefined;
     // **The window first, the thinning second, and that order is the whole point of the zoom.**
     // Thinning the *field* and then magnifying the result shows bigger squares and not one cell
-    // more: at the shipped 96×80 against a ceiling of 48, every other column and every other row
-    // is not drawn at all, so half the analyst's field was unreachable at any magnification. The
-    // cells are taken from inside the view instead, so coming closer is what makes the full
-    // resolution affordable — the same argument `map-view.ts` makes for the consumers' hexes,
-    // which is why this reuses that module rather than growing a second one.
+    // more: at 96×80 against a ceiling of 48 — the shipped grid when this was written — every
+    // other column and every other row was not drawn at all, so half the analyst's field was
+    // unreachable at any magnification. The cells are taken from inside the view instead, so
+    // coming closer is what makes the full resolution affordable — the same argument
+    // `map-view.ts` makes for the consumers' hexes, which is why this reuses that module rather
+    // than growing a second one. The field is 48 wide today (#113) and so is drawn whole; this
+    // ordering is what keeps that a fact about the configuration rather than about the panel.
     const inside = (axis: readonly number[], low: number, high: number) => {
       const indices: number[] = [];
       for (let index = 0; index < axis.length; index++) {
@@ -571,6 +604,38 @@ export function ColumnProvenance({
     const rows = inY.filter((_, at) => at % stepY === 0);
     return { cols, rows };
   }, [slab, view.rect]);
+  /**
+   * The drawn cell a position falls in, or `undefined` where it falls outside the window the
+   * map is currently showing. Half a step of tolerance at each edge, so a click on the
+   * outermost cell's outer half is that cell rather than nothing.
+   */
+  const cursorAt = useCallback(
+    (longitude: number, latitude: number): { row: number; col: number } | undefined => {
+      if (!slab || !drawn) return undefined;
+      const nearest = (values: readonly number[], indices: readonly number[], value: number) => {
+        let best = -1;
+        let closest = Infinity;
+        indices.forEach((source, at) => {
+          const distance = Math.abs((values[source] ?? Number.NaN) - value);
+          if (distance < closest) {
+            closest = distance;
+            best = at;
+          }
+        });
+        // The drawn step, which is the spacing after thinning rather than the field's own.
+        const step =
+          indices.length > 1
+            ? Math.abs((values[indices[1]] ?? 0) - (values[indices[0]] ?? 0))
+            : Number.POSITIVE_INFINITY;
+        return best >= 0 && closest <= step / 2 ? best : undefined;
+      };
+      const col = nearest(slab.longitudes, drawn.cols, longitude);
+      const row = nearest(slab.latitudes, drawn.rows, latitude);
+      return col === undefined || row === undefined ? undefined : { row, col };
+    },
+    [slab, drawn],
+  );
+
 
   /**
    * **North is up.** The served latitude axis *ascends* — `min + i * spacing` over ascending
@@ -725,14 +790,23 @@ export function ColumnProvenance({
 
   // What is still feature 124's is a fact about the region, not about whether an analysis has
   // landed, so it is said on both branches.
+  //
+  // **Which is why it names the volume's control rather than describing the volume.** It said
+  // "the volume below it … captioned there with the depths it found", present tense, on both
+  // branches — including the one that renders when no analysis has been announced, where the
+  // reader is told there is no provenance to read and then given a description of a map, a
+  // surface and a caption that are not on the page. The sentence before it named an absence and
+  // was safe anywhere; a sentence describing a drawing is not, and the comment above was written
+  // for the first kind and not revisited when it became the second.
   const stillToCome = (
     <p className="forecast-column-basis">
-      The field here is a <strong>plan at one depth</strong>. The{' '}
-      <strong>semi-transparent volume</strong>, with the thermocline as a surface through it and
-      the forecast’s features carried down it, is <strong>feature 124’s remaining half</strong>{' '}
-      and is not built: what it adds is a dimension to a drawing that works, and the reason to
-      say so here rather than draw an empty frame is that the column selection, the rays and the
-      profile are the explanation — the volume is the setting they happen in.
+      The map here is a <strong>plan at one depth</strong>, and the{' '}
+      <strong>semi-transparent volume</strong> the chip above opens is the setting it is a section
+      through, with the <strong>thermocline drawn as a surface</strong>. What is{' '}
+      <strong>not built</strong> is the
+      last of <strong>feature 124</strong>: the forecast’s own features — the eddy, the front, the
+      drifting one — carried <em>with depth</em> through that volume. They are drawn in plan today
+      in the region to the right, and what is missing is the dimension rather than the figure.
     </p>
   );
 
@@ -793,11 +867,12 @@ export function ColumnProvenance({
             </button>
           ))}
         </div>
-        {/* **Visible zoom controls, because a wheel is not an affordance.** The field is finer
-            than a panel's width can show, and until this row the only ways to come closer were a
-            wheel and a key press on a focused map: nothing on the page said the map could be
-            approached, and on a touch screen there was no way at all. The reset is here too and
-            not only in the note above, so that the way back does not appear and disappear. */}
+        {/* **Visible zoom controls, because a wheel is not an affordance.** Until this row the
+            only ways to come closer were a wheel and a key press on a focused map: nothing on the
+            page said the map could be approached, and on a touch screen there was no way at all.
+            The reset is here too and not only in the note above, so that the way back does not
+            appear and disappear. (The field was finer than a panel's width when this was written;
+            see `MAP` for what #113 did to that, and why the controls stay.) */}
         <div className="forecast-column-filter" role="group" aria-label="how close the field is drawn">
           <button
             type="button"
@@ -838,20 +913,110 @@ export function ColumnProvenance({
           )}
         </div>
 
-        <div className="forecast-column-filter" role="group" aria-label="depth">
-          {grid.depthsM.map((depth, index) => (
-            <button
-              key={depth}
-              type="button"
-              className={`forecast-chip${index === depthIndex ? ' is-on' : ''}`}
-              aria-pressed={index === depthIndex}
-              onClick={() => setDepthIndex(index)}
-            >
-              {depth.toFixed(0)} m
-            </button>
-          ))}
-        </div>
+        {/* **A chooser rather than a chip per level, because the axis outgrew the row.**
+            Every other control here is a chip, and depth was too — which was right at the six
+            levels the grid had. #113 took it to twenty-six, and twenty-six chips are four wrapped
+            rows: they pushed the volume's own control below the fold, they were the tallest thing
+            in the region before any drawing, and at a phone's width they were most of the screen.
+            A reader asked for the drop-down.
+
+            The chips are not merely restyled: a `select` is one tab stop with the platform's own
+            keyboard and touch handling, where twenty-six buttons are twenty-six tab stops. It
+            names the depth it is on, which the chips could only show by which was lit. */}
+        <label className="forecast-column-filter forecast-depth-choice">
+          depth{' '}
+          <select
+            aria-label="depth"
+            value={depthIndex}
+            onChange={(event) => setDepthIndex(Number(event.target.value))}
+          >
+            {grid.depthsM.map((depth, index) => (
+              <option key={depth} value={index}>
+                {depth.toFixed(0)} m
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+
+      {/* **The volume, and it is closed at rest.** It is this tab's only deck.gl surface and
+          that stack is about a third of the bundle, so `lazy.tsx` withholds it: opening Forecast
+          costs what it always cost and opening a volume costs what a volume costs. The control
+          is a chip like the others rather than a new vocabulary.
+
+          **And it sits with the other controls, because it had stopped being findable.** It was
+          at the foot of the region — after the map, the readout, the rays and the profile, 858px
+          down a 1,065px column and behind 34 chips, below the fold of a 1,000px window. That was
+          tolerable when the depth chooser was six chips; #113 took the depth axis to 26 and the
+          chooser to four rows of them, and a reader opening the Forecast tab then saw a heatmap
+          with no sign that a volume existed. Reported by a reader in those words.
+
+          Nothing measured it, and the two proofs that could have are both blind to it in the
+          same way: `capture:forecast` finds the control by its accessible name and clicks it,
+          which says nothing about where it is, and the narrow proof measures this region with
+          the volume closed. Reachability is not existence, and only existence was held.
+
+          The drawing moves with the control rather than staying at the foot, because a chip that
+          reveals something six hundred pixels below itself reads as a chip that did nothing. */}
+      <div className="forecast-column-filter" role="group" aria-label="the volume">
+        <button
+          type="button"
+          className={`forecast-chip${volumeOpen ? ' is-on' : ''}`}
+          aria-pressed={volumeOpen}
+          onClick={() => setVolumeOpen((open) => !open)}
+        >
+          {volumeOpen ? 'hide the volume' : 'show the volume'}
+        </button>
+        {volumeOpen && (
+          <label className="forecast-volume-parameter">
+            parameter{' '}
+            <select
+              value={volumeParameter}
+              onChange={(event) => setVolumeParameter(event.target.value as VolumeParameter)}
+            >
+              {VOLUME_PARAMETERS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      {volumeOpen && (
+        <Volume
+          collectionId={analysis.collections.analysis}
+          grid={grid}
+          edrPrefix={edrPrefix}
+          validator={validator}
+          parameter={volumeParameter}
+          // The column the region already has, and the same reader that opened it: T011 and T012
+          // both say the volume must not be a second selection, and this is what that means in
+          // code — one `readColumn`, one `column`, two drawings of them.
+          column={column}
+          onPickColumn={(longitude, latitude) => {
+            /*
+             * **The cursor moves with the column, or the two regions disagree about which one
+             * is open.** `Volume.tsx`'s header states the invariant — "a reader who picks in
+             * one and looks at the other must not find two different columns open" — and this
+             * was the one path into `column` that did not keep it: the share map's highlight
+             * and its readout are `cursor`-only, and clicking a square in the volume moved the
+             * rays, the profile, the numbers and the volume's own marker while leaving the
+             * square the reader picked *before* still lit, with its latitude and longitude
+             * printed underneath. Every other route sets it — a click through `onMouseEnter`,
+             * a keyboard Enter through the cursor itself — and this one had no reason not to.
+             *
+             * Outside the drawn window the cursor is cleared rather than snapped to the
+             * nearest edge: a snap would light a square the reader did not choose, which is
+             * the same fault one cell wide instead of a hundred kilometres.
+             */
+            const at = cursorAt(longitude, latitude);
+            setCursor(at);
+            void readColumn(longitude, latitude);
+          }}
+        />
+      )}
 
       {/* **A grid already read does not make the give-up sayable.** `gridGaveUp` was read in one
           place, inside `if (!analysis || !grid)`, so it could only ever be stated by a region that
@@ -1290,6 +1455,7 @@ export function ColumnProvenance({
         that the query layer works rather than a picture drawn from a private reach into the
         store.
       </p>
+
 
       {stillToCome}
     </div>

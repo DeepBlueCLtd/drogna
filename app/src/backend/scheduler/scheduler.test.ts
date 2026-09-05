@@ -23,7 +23,7 @@ import { Scheduler } from './scheduler.js';
 import { twoLayerStability } from '../model-runner/kernel.js';
 import type { SeamClient, SeamMessage } from '../../seam/transport.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
-import { SOUND_SPEED } from '../env-generator/analytic.js';
+import { SOUND_SPEED } from '../../seam/ocean-relations.js';
 
 const validator = createSeamValidator();
 
@@ -499,6 +499,72 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     expect(promptHolds()).toBe(2);
     expect(floorHolds()).toBe(1);
     expect(bench.requests).toHaveLength(0);
+    scheduler.stop();
+  });
+
+  it('measures its intervals from a standing run it did not request, not from its own orphaned request', () => {
+    /*
+     * **The state a replayed start condition puts this component in, planted.**
+     *
+     * A condition whose artefact carries the forecast eras holds the model runner back for the
+     * whole pre-roll: every request this component makes goes unanswered, is released by the
+     * watchdog, and leaves `lastRequestTick` pointing at it. The run the reader is looking at was
+     * requested at a tick this instance never saw — so before the fix it measured the minimum
+     * interval from the orphan and turned the loop early. Watched on `returning`: the live run
+     * waited 574 ticks for its next forecast and the replayed one 19.
+     *
+     * The tick comes from `valid_time.start_sim_time`, which the announcement already carries
+     * because the first forecast step *is* the state the run was initialised from. Every other
+     * test in this file publishes a standing run at tick 0 with the scheduler also near tick 0,
+     * where the new arithmetic and the old `undefined` decide alike — which is why all of them
+     * stayed green through the change and why this one exists.
+     */
+    const config = lockstepConfig();
+    const bench = new Bench();
+    const scheduler = new Scheduler(config.scheduler, bench.client, 'replayed-episode');
+    scheduler.start();
+    bench.deliver(config.model_runner.topics.run_cost, { cost_ticks: 9 });
+
+    // Well past the floor, so a request is due and goes out — and nobody answers it: the runner
+    // this artefact speaks for is held back.
+    const orphaned = config.scheduler.max_interval_ticks + 100;
+    for (const at of [0, 1, orphaned]) bench.tick(config, at);
+    expect(bench.requests.length).toBeGreaterThan(0);
+
+    // Then the runner starts and restates the run the artefact carries, which was initialised
+    // much later than the orphaned request.
+    const standingAt = orphaned + 900;
+    bench.deliver(config.scheduler.topics.run_published, {
+      run_id: 'standing-from-the-artefact',
+      current: true,
+      // Validity short enough to have lapsed by the floor below, so the release this test is
+      // about is the cadence floor's and not a hold expiring (ADR-0043 holds a warranted run
+      // *while* the standing forecast still has life, which would otherwise mask the interval).
+      valid_time: { start_sim_time: bench.simTimeAt(standingAt), end_sim_time: bench.simTimeAt(standingAt + 600) },
+    });
+
+    /*
+     * The tick that separates the two beliefs, and it has to be chosen rather than guessed. The
+     * cadence floor fires at `lastRequestTick + max_interval_ticks`, so measuring from the orphan
+     * it comes due at `orphaned + 1800` and measuring from the standing run at `standingAt + 1800`,
+     * which is 900 ticks later. One tick past the first and short of the second is the only place
+     * the two disagree — and the standing run's validity has already lapsed there, so a hold
+     * cannot be what keeps the loop quiet.
+     *
+     * A first version of this test ticked at `standingAt + min_interval - 10`, which is short of
+     * *both* floors: it passed with the fix disabled, and proved nothing.
+     */
+    const before = bench.requests.length;
+    bench.tick(config, orphaned + config.scheduler.max_interval_ticks + 1);
+    expect(
+      bench.requests.length,
+      'the cadence floor fired measuring from a request nobody answered, rather than from the run that stands',
+    ).toBe(before);
+
+    // And it is not simply refusing for ever: the floor measured from the standing run comes due
+    // 900 ticks later, and the loop turns there.
+    bench.tick(config, standingAt + config.scheduler.max_interval_ticks + 1);
+    expect(bench.requests.length).toBeGreaterThan(before);
     scheduler.stop();
   });
 

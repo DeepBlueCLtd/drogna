@@ -150,24 +150,101 @@ published today.
       carried share is not published alone, and the identity is the kernel test's.
 ## The centre region — the volume and its grid
 
-- [ ] T008 `panels/forecast/Volume.tsx`, code-split as the map is (`registry.tsx`'s
+- [x] T008 `panels/forecast/Volume.tsx`, code-split as the map is (`registry.tsx`'s
       `DEFERRED_VIEWS` gains nothing; the split is inside the panel, on the Data tab's
-      precedent).
-- [ ] T009 The semi-transparent field with the thermocline as a surface through it, its
+      precedent). *Built.* `lazy.tsx` withholds it exactly as `data/lazy.tsx` does and for the
+      measured reason that file records: deck.gl is about a third of the bundle and this is the
+      tab's only surface that needs it. Closed at rest, so opening Forecast costs what it always
+      cost. The frame, the cartesian mapping and the click's inverse are `map/cube.ts`, imported
+      rather than copied — the Data tab's volume imports the same module.
+- [x] T009 The semi-transparent field with the thermocline as a surface through it, its
       strength carried by the surface's appearance. Not a depth slice: the reason is at
       FR-120 and is that the thermocline domes, tilts and breaks.
+
+      *Built, and the surface is nearly flat on the shipped configuration — measured, stated on
+      the drawing, and raised as its own question rather than hoped past.* The harness publishes a
+      thermocline as a **domain mean**, which is one number and therefore a plane, so the surface
+      is derived per column from the served field: one area query per level, the run's own
+      definition (`model-runner/features.ts` — the steepest level pair, at its midpoint) applied
+      to each column instead of to the mean. `volume.ts` is that arithmetic, pure and tested, and
+      bound to the backend by a test that **calls `estimateFeatures`** rather than transcribing it.
+
+      *As first built the surface came out flat, and saying so is what fixed it.* Driven against
+      `arriving` on the then-shipped six-level axis: **7,679 of 7,680 columns placed it at 100 m
+      and one at 300 m.** The caption stated that count rather than calling the result a doming
+      surface, and the measurement was raised as DeepBlueCLtd/drogna#113 rather than settled
+      inside this task, because the depth axis is a data change touching every holding and every
+      feature that scores against one.
+
+      *And the answer was not the one the issue expected, which is why the record of it is here
+      rather than only there.* Raising the resolution alone changes nothing: sampled at 200, 100,
+      50, 40, 25 and 10 m spacing the surface has **one distinct depth at every one of them**,
+      because analytic form 1's `thermoclineAnomalyT` took no longitude and no latitude. The layer
+      was one depth everywhere and there was nothing there to resolve — so FR-120's rationale
+      described something the harness did not contain, and no drawing at any spacing could have
+      shown it. Form 2 displaces the layer where a feature warms or cools the water at it
+      (ADR-0044), the axis went to 26 levels to carry the result, and FR-120 was **not** amended.
+
+      The drawing is unchanged in kind: it still measures the distinct-depth count in the field it
+      was served, still prints it, and still says the flatness is the grid's if it finds one. What
+      it prints now is the modal share as well, because the doming is local — an eddy and a
+      drifting feature in a domain hundreds of kilometres wide — and "it domes and tilts" written
+      across a field that is 82% one depth would be the same false illumination arriving from the
+      other side.
 - [ ] T010 The eddy, front and drifting feature carried **with depth** in the volume, against
       the field they are in, read from the forecast-features holding feature 123 publishes.
       *Reconciled:* the plan view of the same features is built (`FeatureTracks.tsx`, 123's
       T080) and stays in the right region; this task adds a dimension to a drawing that
       exists and does not introduce it.
-- [ ] T011 The clickable grid on the surface plane; selection by grid square, yielding a
+
+      *The arithmetic landed ahead of the drawing, and that is a cost worth naming.*
+      `volume.ts` carries `featureReach` and `FEATURE_SIGMAS` — how far a published feature is
+      distinguishable from the field it is in, level by level — tested, but with no caller: the
+      drawing this task asks for is what will use it. It shipped early because it is what the
+      measurement in that file's note *is*, and deleting it to re-derive it would throw away the
+      calibration. Its σ figures were re-measured when #113 moved the depth axis, which is the
+      maintenance an unused module costs and the reason not to make a habit of this.
+- [x] T011 The clickable grid on the surface plane; selection by grid square, yielding a
       water column. Keyboard traversal reaches every square. *Reconciled:* the share map in
       `ColumnProvenance.tsx` already selects a column by square with arrow keys and enter;
-      the volume's grid is the same selection and must not be a second one.
-- [ ] T012 The parameter control, defaulting to sound speed, and the depth control.
+      the volume's grid is the same selection and must not be a second one. *Built as that
+      reconciliation asks:* the volume is rendered inside `ColumnProvenance`, where `column` and
+      `readColumn` already live. A click is resolved against a **pickable grid of squares on the
+      surface plane**, which is what FR-06 asks for in as many words — "nothing inside the volume
+      is clickable" — so deck.gl returns the square or nothing and `cellBounds` reads the column's
+      position off the served axes.
+
+      *The first version did read the canvas coordinate, and that is the fault the requirement
+      names.* It took `info.coordinate`, deck.gl's ground-plane unprojection, which is where the
+      ray through the pixel crosses depth nought and not where the cell the reader pointed at is
+      drawn: a click on a deep cell opened a column about 180 km away, and a click on the empty
+      canvas beside the box opened one outside the domain, clearing the reader's rays and figures
+      for a position the analysis never covered. `cube.ts`'s inverse is tested as a round trip
+      against `toCartesian` and was not the problem — the problem was asking it a question about a
+      plane the reader was not clicking on. The keyboard route to a square is the share map's, unchanged, which
+      is what "must not be a second one" means in code.
+- [x] T012 The parameter control, defaulting to sound speed, and the depth control.
       *Reconciled:* a depth control exists on the share map (123's T084) and walks the same
       column; the volume shares it rather than gaining a second. The parameter control is new.
+
+      *Blocked, then unblocked by the first of the three routes it named.* The control shipped
+      first offering only what an analysis holding carries — temperature and salinity — because
+      sound speed is derived from the pair and ADR-0005 makes that derivation "the single
+      implementation in drogna", so a second one in this panel was ruled out by that decision
+      rather than by preference. The three routes recorded here were: move `soundSpeedMs` into
+      `app/src/seam/`; have the query layer serve a derived `sound_speed`; or amend the task.
+
+      *Built as the first.* `app/src/seam/ocean-relations.ts` now holds the pressure and sound
+      speed relations and `env-generator/analytic.ts` re-exports them, so every backend caller is
+      unchanged and the panel derives sound speed per cell from the temperature and salinity it
+      already queries. The ripple the note predicted was real and is the record of it: the
+      implementation path is a string in every manifest, so all four snapshots regenerated — read
+      rather than trusted, and *for that commit alone* the only differences were that path, its
+      length prefix and the code revision, with none of the 2,382 field digests moved. (Analytic
+      form 2 landed two commits later and moved every field; ADR-0044 has that. The figure here
+      is about the seam move, which is what makes it worth having: a move that touches every
+      manifest and no field.) `sound_speed` is the control's
+      first entry and its default.
 
 ## The rays
 
@@ -1184,12 +1261,20 @@ the part worth recording, because each was a sentence asserting a property the c
       taken rather than the one it described.
 
 - [x] T036 **Zoom and pan on the share field**, asked for after the screenshots showed the rays
-      as a smudge. The field is 96×80 against a drawn ceiling of 48, so the step was two in both
+      as a smudge. The field was 96×80 against a drawn ceiling of 48, so the step was two in both
       directions and **half the analyst's field could not be looked at at any size**: magnifying
       a thinned field shows bigger squares and not one more cell. So the view windows first and
       thins second — the cells drawn are the ones inside the rectangle, at the resolution they
-      were filed at. Measured on a live drive: whole field 48×40 of 96×80; at 1.7× it is 28×46,
-      the step falling to one and the field finally drawn as published; at 12.8×, 8×7.
+      were filed at. Measured on a live drive at the time: whole field 48×40 of 96×80; at 1.7× it
+      is 28×46, the step falling to one and the field finally drawn as published; at 12.8×, 8×7.
+
+      **Past tense, because #113 spent the horizontal on depth in this same feature.** The field
+      is 48×40 now, so it fits the 48-cell ceiling whole, the step is one everywhere and coming
+      closer gives bigger squares rather than more of them. The ordering above is unchanged and
+      is what makes that a fact about the configuration rather than about the panel — it starts
+      working again the moment the field outgrows the panel — but the apparatus has no reachable
+      effect on the shipped grid, and `ColumnProvenance`'s `MAP` note says so at the point of
+      use. The measurements in this line are what a live drive showed when the line was written.
 
       **Reused rather than rewritten.** `useMapView` already existed for the consumers' maps —
       wheel about the pointer, drag, keys, reset, clamped to the domain — and it is promoted from
@@ -1389,6 +1474,13 @@ the part worth recording, because each was a sentence asserting a property the c
       the thing that moves; `pnpm capture:motion`.
       *Built:* `site/docs/blog/posts/the-weights-were-there-and-thrown-away.md`, with the
       capture and its provenance beside it.
+
+      *And a second entry, which the rule asks for and this line did not anticipate.*
+      `the-drawing-was-honest-and-the-ocean-was-flat.md` carries the volume: a new face in the
+      shell, which `CLAUDE.md` counts one entry per rather than one per feature. It is also the
+      entry for what the volume's honesty found — analytic form 2 and issue #113 — which is the
+      part a reader outside the project would recognise. Recorded here so a reader checking this
+      task against the tree finds two entries where the line named one, and knows why.
 
       **Captured still rather than moving — and the reason first written here was wrong about a
       file in this repository.** It said `capture:motion` "drives the clock and films what the

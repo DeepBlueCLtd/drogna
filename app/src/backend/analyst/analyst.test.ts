@@ -20,7 +20,7 @@ import type {
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
-import { soundSpeedMs } from '../env-generator/analytic.js';
+import { soundSpeedMs } from '../../seam/ocean-relations.js';
 import { driveUntil } from '../test-support/drive.js';
 
 const validator = createSeamValidator();

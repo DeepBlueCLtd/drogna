@@ -214,9 +214,19 @@ describe('the four features, estimated from a gridded field and scored against t
     const authored = truth(manifest, 'thermocline');
     const errorM = Math.abs(thermocline.depthM - authored.depth_m);
     // The bound is the grid's own depth spacing, read from the manifest. It is NOT the
-    // authoring jitter: six levels over a kilometre resolve 200 m, the authored depth is
-    // 80 m and the jitter is 15, so a jitter bound would be scoring the grid and calling it
-    // the estimator. Stated here rather than discovered later, per T024.
+    // authoring jitter: the authored depth is 80 m and the jitter is 15, so a jitter bound
+    // would be scoring the grid and calling it the estimator wherever the spacing is coarser
+    // than the jitter — which it was by an order of magnitude when this was written and still
+    // is (#113 moved it from 200 m to 40). Stated here rather than discovered later, per T024.
+    //
+    // **And under analytic form 2 this scores the pick against the layer's *far-field* depth.**
+    // `authored.depth_m` is where the layer sits away from the two displacing features, and the
+    // domain mean of the displaced layer is not quite that. It passes because the eddy and the
+    // drifting feature cover a small part of the domain, so the area-mean displacement is near
+    // zero — errors run 6 to 17 m against a 40 m bound. Widen a feature, raise
+    // `displacement_m_per_c`, or add the basin tilt ADR-0044 says is still wanted, and this
+    // fails for a reason that is not the estimator's. Written down because the passing margin
+    // is the only thing currently holding it, and a margin is not an argument.
     const boundM = manifest.grid.depth.spacing;
     console.log(
       `AT-06 seed ${rootSeed}: thermocline placed at ${thermocline.depthM.toFixed(0)} m against an authored ${authored.depth_m.toFixed(0)} m, ` +

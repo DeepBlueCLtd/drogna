@@ -78,6 +78,13 @@ export default defineConfig({
     // the comment above records CI taking roughly twice as long. 120s is that measurement
     // doubled for a CI runner and rounded up, and it is the number to re-derive the next
     // time the loop gets dearer rather than the number to nudge.
+    //
+    // Re-derived at #113, which raised the depth axis from 6 levels to 26 and looked like it
+    // would be expensive here. It is not: the horizontal was halved to pay for it, so the
+    // analysis grid carries 8% more cells, and `analyst.test.ts` — the file this ceiling is
+    // about — went from 48.9s to 51.9s on this machine, 6%. Doubled for a runner that is
+    // still 104s. The number stands, and this is the measurement rather than an assumption
+    // that it would.
     hookTimeout: 120_000,
   },
 });

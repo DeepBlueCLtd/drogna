@@ -47,6 +47,17 @@
   gap: 0.8em;
 }
 
+/* One grid cell, two regions stacked in it: the left column carries "Why now" and, beneath it,
+   the run list that used to run full width under the grid. `align-content: start` so the two keep
+   their own heights instead of stretching to fill a column whose height is set by the tall region
+   beside them. */
+.forecast-stack {
+  display: grid;
+  gap: 0.8em;
+  align-content: start;
+  min-width: 0;
+}
+
 .forecast-region {
   border: 1px solid #232c36;
   padding: 0.6em 0.7em;
@@ -163,10 +174,23 @@
  * every width to fix a fault that only appears at one. There is no breakpoint here either
  * way: the row narrows wherever the content stops fitting.
  */
+.forecast-depth-choice {
+  align-items: baseline;
+  gap: 0.4em;
+}
+
+/* **Three tracks, and the detail on its own row.** The run list moved out of the full width
+   beneath the grid and into the left-hand column, and the four-track row no longer fits: the
+   narrow proof measured 254px of button in a 247px cell on every run in the list. `auto` maxima
+   do not help, because an `auto` track's maximum *is* max-content — the tick, the mark and the
+   cause together are already wider than the cell before the detail is placed at all.
+   
+   So the detail spans the row beneath them. It holds at any width rather than at one breakpoint,
+   it keeps the first three columns aligned down the list, which is what made this a grid, and in
+   a narrow column the detail reads better under its cause than squeezed beside it. */
 .forecast-run {
   display: grid;
-  grid-template-columns:
-    minmax(0, max-content) minmax(0, max-content) minmax(0, max-content) minmax(0, 1fr);
+  grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(0, 1fr);
   gap: 0 0.6em;
   align-items: baseline;
   width: 100%;
@@ -198,6 +222,7 @@
 }
 
 .forecast-run-detail {
+  grid-column: 1 / -1;
   color: var(--shell-dim);
   /* A shrinkable track is not enough on its own: the floor of a cell whose text cannot
      break is its longest word, and "published:" is 70px at this size — which is exactly
@@ -369,6 +394,19 @@
 .forecast-chip:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* The volume: a fixed height like the share map, so opening it does not reflow the column. */
+.forecast-volume-canvas {
+  position: relative;
+  height: 260px;
+  margin-top: 0.4em;
+}
+
+.forecast-volume-parameter {
+  align-self: center;
+  font-size: 0.8em;
+  color: var(--shell-dim);
 }
 
 .forecast-column-zoom {

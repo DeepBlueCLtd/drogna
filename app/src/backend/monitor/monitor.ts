@@ -47,7 +47,7 @@ import type {
 } from '../../generated/types.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
-import { soundSpeedMs } from '../env-generator/analytic.js';
+import { soundSpeedMs } from '../../seam/ocean-relations.js';
 import { sampleHolding, timeAxisPosixOrigin } from '../query/field-sampler.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 

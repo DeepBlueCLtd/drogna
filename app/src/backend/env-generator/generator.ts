@@ -39,15 +39,13 @@ import {
   ANALYTIC_FORM_VERSION,
   COMPOSITION_RULE,
   KM_PER_DEGREE_LATITUDE,
-  PRESSURE_RELATION,
-  SOUND_SPEED,
   TAU_BLENDING_RULE,
   TAU_MEMBERSHIP_RULE,
-  insideSoundSpeedValidity,
   salinityAt,
   temperatureAt,
   type WorldParameters,
 } from './analytic.js';
+import { PRESSURE_RELATION, SOUND_SPEED, insideSoundSpeedValidity } from '../../seam/ocean-relations.js';
 
 export const GENERATOR_VERSION = '2.0.0';
 

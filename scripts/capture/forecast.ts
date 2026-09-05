@@ -516,6 +516,84 @@ try {
   mkdirSync(dirname(outPath), { recursive: true });
   await region.screenshot({ path: outPath });
 
+  /*
+   * **And a second shot, of the volume.** It is closed at rest — `lazy.tsx` withholds a third of
+   * the bundle until something asks for it — so the region shot above never contains it, and the
+   * one drawing in this tab that is a three-dimensional surface had no picture proving it renders
+   * at all. Opening it here rather than in a command of its own is the point: this proof has
+   * already paid for the expensive part, which is warming the loop until an analysis exists and
+   * opening a column on it.
+   *
+   * The caption is read back and the shot refused if the surface placed nothing, for the reason
+   * `capture:forecast` exists at all — a picture of an empty box is worse than no picture, and
+   * this region in particular is capable of drawing a convincing volume with no surface in it.
+   */
+  const volumeShot = outPath.replace(/\.png$/, "-volume.png");
+  await page.getByRole("button", { name: "show the volume" }).click();
+  const volume = page.getByTestId("forecast-volume");
+  await volume.waitFor({ state: "visible", timeout: 30_000 });
+  const caption = page.getByTestId("forecast-volume-caption");
+  await caption.waitFor({ state: "visible", timeout: 60_000 });
+  const captionText = (await caption.textContent()) ?? "";
+  const columns = /(\d+) of (\d+) columns have one, over (\d+) distinct/.exec(captionText);
+  if (!columns) throw new Error(`the volume drew no surface count: ${captionText.slice(0, 200)}`);
+  const [, placed, total, distinct] = columns;
+  if (Number(placed) === 0)
+    throw new Error(`the volume placed the thermocline in none of ${total} columns`);
+  /*
+   * **The shape claim, asserted rather than printed.**
+   *
+   * The first version of this block computed these three figures and put them in a `console.log`,
+   * which is not a check: reverting `displacement_m_per_c` to nought — analytic form 1's flat
+   * field, the exact regression issue #113 was raised for — left `placed` at 1920, matched
+   * nothing here, and shot the picture and exited 0. A proof added in answer to a fault that
+   * passes on that fault is the thing `CLAUDE.md` puts second in the file.
+   *
+   * **And what it does not check, because a proof that cannot fail is worse than no proof.**
+   *
+   * The obvious assertion here is "the layer takes more than one depth", which is exactly what
+   * analytic form 1 could not do (#113). It was written, and it is worthless, and the measurement
+   * says why. `thermoclineSurface` over the *truth* field distinguishes the two forms cleanly —
+   * three distinct depths with the displacement, one without. Over the *served analysis*, which is
+   * what this region draws, it does not: four distinct depths with the displacement and four
+   * without, because assimilation puts enough scatter into a weakly-constrained column to move its
+   * steepest pair on its own. Setting `displacement_m_per_c` to nought and running this command
+   * passed it.
+   *
+   * So the shape check lives in `generator.test.ts`, over the field the manifest describes and
+   * against a bound derived from the manifest's own displacement — where it goes red on a zero
+   * displacement and on a too-coarse axis, both watched. What is asserted *here* is what a picture
+   * can honestly be asked for: that the surface was placed, and that the caption states a measured
+   * figure beside its count rather than a bare number.
+   */
+  /*
+   * **A disjunction over the caption's own two arms cannot fail, which is what this was.**
+   *
+   * It read "either branch names a measured figure" — and both arms of `Volume.tsx`'s conditional
+   * always emit one, so it was true of every state the component can produce. That is the second
+   * uncheckable assertion this block has carried, the first being the shape claim above it, and
+   * it was written while removing that one.
+   *
+   * What a picture can honestly be asked is that the number the caption prints is the number the
+   * field carries. The share map beside it draws one rect per cell of the same served grid, so
+   * the two counts have to agree; a caption that stopped counting, counted an axis, or reported a
+   * subset would not match. That is data-dependent, and it is what is asserted below.
+   */
+  const columnsInGrid = await page.evaluate(() => {
+    const svg = document.querySelector("svg.forecast-share-map");
+    return svg ? svg.querySelectorAll("rect.share-cell").length : 0;
+  });
+  if (columnsInGrid > 0 && Number(total) !== columnsInGrid)
+    throw new Error(
+      `the caption counted ${total} columns and the share map drew ${columnsInGrid} of the same served field`,
+    );
+  await volume.screenshot({ path: volumeShot });
+  console.log(volumeShot);
+  console.log(
+    `forecast: the volume placed the thermocline in ${placed} of ${total} columns over ${distinct} distinct depth(s); ` +
+      captionText.slice(captionText.indexOf("distinct depth"), captionText.indexOf("distinct depth") + 120).trim(),
+  );
+
   const simTime = await page.getByTestId("sim-time").textContent();
   const runId = await page.locator(".shell-run").textContent();
   const provenance = {
@@ -546,6 +624,33 @@ try {
   await writeFile(
     outPath.replace(/\.png$/, ".provenance.json"),
     `${JSON.stringify(provenance, null, 2)}\n`,
+  );
+
+  /*
+   * **And a sidecar for the volume shot too.** The first version of the volume capture wrote the
+   * picture and nothing beside it, which made it the only asset under `site/docs/blog/assets/`
+   * with no provenance — a picture of a running system whose run, condition, sim time and clock
+   * rate were unrecorded, which is a claim rather than evidence. It shares this run's facts and
+   * carries its own: the surface count the caption stated at the shutter, and the caption itself.
+   */
+  await writeFile(
+    volumeShot.replace(/\.png$/, ".provenance.json"),
+    `${JSON.stringify(
+      {
+        ...provenance,
+        image: basename(volumeShot),
+        image_size: pngSize(await readFile(volumeShot)),
+        // The volume's own box, not the centre region's: a sidecar describes the artefact beside
+        // it, and inheriting the region's would have been a measurement of a different picture.
+        element_box: await volume.boundingBox().then((b) =>
+          b ? { width: Math.round(b.width), height: Math.round(b.height) } : undefined,
+        ),
+        surface: { columns: Number(total), placed: Number(placed), distinct_depths: Number(distinct) },
+        volume_caption: captionText.replace(/\s+/g, " ").trim(),
+      },
+      null,
+      2,
+    )}\n`,
   );
 
   /**

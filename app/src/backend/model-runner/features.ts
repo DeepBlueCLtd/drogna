@@ -22,9 +22,10 @@
  * point on a line rather than the authored anchor: a line has no distinguished point, so
  * the scorable claim is the perpendicular distance to the authored line and the bearing,
  * never the distance between two anchors. The thermocline is found between the two levels
- * whose temperature difference is steepest, which at six levels over a kilometre is a
- * claim resolved to the depth spacing and to nothing finer; the estimate says so by
- * carrying the spacing it was resolved at.
+ * whose temperature difference is steepest, which is a claim resolved to the depth spacing
+ * and to nothing finer; the estimate says so by carrying the spacing it was resolved at,
+ * rather than naming a spacing here that the configuration is free to change (it did: #113
+ * moved the axis from six levels to twenty-six).
  */
 import { KM_PER_DEGREE_LATITUDE, kmOffsets } from '../env-generator/analytic.js';
 import type { KernelParameters, ModelKernel } from './kernel.js';
@@ -71,9 +72,11 @@ export interface ThermoclineEstimate {
   readonly thicknessM: number;
   /**
    * The domain-mean temperature drop across that grid interval. **Not the authored
-   * temperature drop**, which is taken across a thermocline an order of magnitude thinner
-   * than the interval: a 200 m grid cannot see a 30 m layer, so the two are different
-   * quantities and the gradients they imply differ by the same factor.
+   * temperature drop**, which is taken across the layer itself: the two are the same
+   * measurement only where the spacing has closed on the layer's thickness, and differ by
+   * that ratio otherwise. `thicknessM` beside it is the interval this was taken over, so the
+   * ratio is the reader's to form. It was 30 m of layer against 200 m of spacing when this
+   * was written and is 30 against 40 now (#113); the sentence no longer names either.
    */
   readonly layerDropC: number;
 }
@@ -145,7 +148,7 @@ function depthAveragedAnomaly(temperature: Float32Array, grid: FeatureGrid): Flo
  * scenario's grid, the recovered centres move from 164 km and 181 km of error to 7 km each.
  *
  * Computed through a summed-area table, so the cost is one pass over the field rather than
- * one window per cell: a run happens inside a browser tab, and a 96 x 80 grid with a 41-cell
+ * one window per cell: a run happens inside a browser tab, and a 48 x 40 grid with a 21-cell
  * window is thirteen million reads done the naive way.
  */
 function highPassWindow(lonCount: number, latCount: number): number {
@@ -559,7 +562,7 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
       kind: 'thermocline',
       quantity: 'temperature_drop_c',
       reason:
-        'the authored drop is taken across a layer some tens of metres thick and the grid resolves hundreds, so the drop across a grid interval is a different quantity and the gradients they imply differ by that ratio. The drop that was measured is published as layer_drop_c beside the thickness_m it was taken over',
+        'the authored drop is taken across the layer itself and this is taken across a grid interval, so the two are different quantities whenever the interval is not the layer: they are the same measurement only where the spacing has closed on the thickness. The drop that was measured is published as layer_drop_c beside the thickness_m it was taken over, so a reader can form that ratio rather than being told it',
     });
   }
   return { eddy, moving, front: frontEstimate, thermocline: thermoclineEstimate, declined };

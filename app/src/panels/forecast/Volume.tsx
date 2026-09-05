@@ -300,21 +300,33 @@ export function Volume({
   }, []);
 
   /*
-   * **The per-level alpha is derived from how many levels there are, not typed.**
+   * **The per-level alpha, and why it is a measured constant rather than a derivation.**
    *
    * It was `46`, with the comment "thin enough to see through a stack of six". Transmittance
-   * through a stack compounds — `(1 − a/255)^n` — so six levels at 46 let 30% of the far side
-   * through, which is what "semi-transparent" means, and the twenty-six levels this axis now
-   * carries (#113) let **0.6%** through. The box went opaque and the surface FR-120 asks the
-   * transparency to reveal was inside it. It is visible in this branch's own committed capture:
-   * a flat grey solid with the thermocline showing only where it pokes past the near edge.
+   * through a stack compounds — `(1 − a/255)^n` — so at the twenty-six levels this axis now
+   * carries (#113) that let 0.6% of the far side through: the box went opaque and the surface
+   * FR-120 asks the transparency to reveal was inside it.
    *
-   * So the *stack's* transmittance is the constant, and the level's share follows from the count.
-   * Change the depth axis again and the drawing stays as see-through as it was.
+   * The tidy answer was to hold the *stack's* transmittance constant and let the level's share
+   * follow from the count. That is the physically right rule — halve the interval, double the
+   * slabs, and the water is as clear as it was — and it was written that way. At 30% it gives 12
+   * per level over twenty-six, and driven and looked at, that is a wireframe box with no field
+   * in it: the ramp carries the parameter a reader chose, and at alpha 12 the parameter is not
+   * there. A reader said so in as many words — "I just see a heatmap".
+   *
+   * So the constant is the alpha the ramp needs to be legible, measured by rendering the shipped
+   * column at 12, 24, 60, 90 and 140 and looking at each: 60 is still nearly black, 140 is a
+   * solid, and 90 shows the field grading from warm at the surface to blue at depth with the
+   * thermocline still crossing it as a bright band. The band survives because the surface is
+   * drawn brighter than any level and sits inside the stack — not because the stack is
+   * see-through, which at twenty-six levels it is not.
+   *
+   * **What that costs, said rather than glossed:** the box is effectively opaque from behind, so
+   * "semi-transparent" describes the front of the stack and not the whole of it, and a reader
+   * cannot see the far wall through it. The alternative was a field nobody could read. If the
+   * depth axis moves far from twenty-six, this is the number to re-measure, the same way.
    */
-  const STACK_TRANSMITTANCE = 0.3;
-  const levelAlpha =
-    levels.length > 0 ? Math.max(1, Math.round(255 * (1 - STACK_TRANSMITTANCE ** (1 / levels.length)))) : 46;
+  const LEVEL_ALPHA = 90;
 
   /*
    * **Memoised, because `data` identity is deck.gl's full-invalidation trigger.**
@@ -358,7 +370,7 @@ export function Volume({
             getFillColor: ({ value }: { value: number }) => {
               if (!Number.isFinite(value)) return [0, 0, 0, 0] as [number, number, number, number];
               const [red, green, blue] = rampColour(value, span.minimum, span.maximum);
-              return [red, green, blue, levelAlpha] as [number, number, number, number];
+              return [red, green, blue, LEVEL_ALPHA] as [number, number, number, number];
             },
           })
         : undefined,
@@ -458,7 +470,7 @@ export function Volume({
         })
       : undefined,
     ].filter((layer) => layer !== undefined),
-    [levels, surface, first, span, frame, grid, column, levelAlpha, strongest, cellBounds],
+    [levels, surface, first, span, frame, grid, column, strongest, cellBounds],
   );
 
   return (

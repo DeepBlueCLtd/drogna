@@ -341,10 +341,13 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     const areasBefore = fetched.filter((url) => url.includes('/area?')).length;
     expect(areasBefore).toBeGreaterThan(0);
 
-    const depthChips = [...document.querySelectorAll('[aria-label="depth"] .forecast-chip')];
-    expect(depthChips.length, 'the depth control offered no levels').toBeGreaterThan(1);
+    // The depth control is a `select` since #113 took the axis to 26 levels — 26 chips were four
+    // wrapped rows and 26 tab stops. Driven as a chooser rather than as buttons.
+    const depthChoice = document.querySelector<HTMLSelectElement>('select[aria-label="depth"]');
+    if (!depthChoice) throw new Error('no depth chooser');
+    expect(depthChoice.options.length, 'the depth control offered no levels').toBeGreaterThan(1);
     await act(async () => {
-      fireEvent.click(depthChips[depthChips.length - 1]);
+      fireEvent.change(depthChoice, { target: { value: String(depthChoice.options.length - 1) } });
     });
     await act(async () => {
       await Promise.resolve();
@@ -1032,7 +1035,7 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // **The fault.** `gridGaveUp` was read in exactly one place — inside `if (!analysis ||
       // !grid)` — so it could only ever be stated by a region that had *never* obtained an axis.
       // Once one had been read the console could spend its whole allowance on every later cycle,
-      // stop asking for good, and go on offering the first cycle's depth chips over the current
+      // stop asking for good, and go on offering the first cycle's depth levels over the current
       // cycle's field with nothing anywhere saying the depths were old. That is the same
       // permanent-wrong-sentence class this feature fixed in the other direction, where the
       // region kept saying the store "had none when this console asked" after it had answered.
@@ -1246,10 +1249,11 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       }) as typeof globalThis.fetch);
 
       // Re-read the field at another depth so the planted body is the one drawn.
-      const depths = [...document.querySelectorAll('[aria-label="depth"] button.forecast-chip')];
-      expect(depths.length, 'no depth to change to').toBeGreaterThan(1);
+      const depths = document.querySelector<HTMLSelectElement>('select[aria-label="depth"]');
+      if (!depths) throw new Error('no depth chooser');
+      expect(depths.options.length, 'no depth to change to').toBeGreaterThan(1);
       await act(async () => {
-        fireEvent.click(depths[depths.length - 1]);
+        fireEvent.change(depths, { target: { value: String(depths.options.length - 1) } });
       });
       await act(async () => {
         await Promise.resolve();
@@ -1301,10 +1305,11 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         return passthrough(input, init);
       }) as typeof globalThis.fetch);
 
-      const depths = [...document.querySelectorAll('[aria-label="depth"] button.forecast-chip')];
-      expect(depths.length, 'no depth to change to').toBeGreaterThan(1);
+      const depths = document.querySelector<HTMLSelectElement>('select[aria-label="depth"]');
+      if (!depths) throw new Error('no depth chooser');
+      expect(depths.options.length, 'no depth to change to').toBeGreaterThan(1);
       await act(async () => {
-        fireEvent.click(depths[depths.length - 1]);
+        fireEvent.change(depths, { target: { value: String(depths.options.length - 1) } });
       });
       await act(async () => {
         await Promise.resolve();

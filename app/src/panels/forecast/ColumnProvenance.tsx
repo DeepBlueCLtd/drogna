@@ -913,20 +913,110 @@ export function ColumnProvenance({
           )}
         </div>
 
-        <div className="forecast-column-filter" role="group" aria-label="depth">
-          {grid.depthsM.map((depth, index) => (
-            <button
-              key={depth}
-              type="button"
-              className={`forecast-chip${index === depthIndex ? ' is-on' : ''}`}
-              aria-pressed={index === depthIndex}
-              onClick={() => setDepthIndex(index)}
-            >
-              {depth.toFixed(0)} m
-            </button>
-          ))}
-        </div>
+        {/* **A chooser rather than a chip per level, because the axis outgrew the row.**
+            Every other control here is a chip, and depth was too — which was right at the six
+            levels the grid had. #113 took it to twenty-six, and twenty-six chips are four wrapped
+            rows: they pushed the volume's own control below the fold, they were the tallest thing
+            in the region before any drawing, and at a phone's width they were most of the screen.
+            A reader asked for the drop-down.
+
+            The chips are not merely restyled: a `select` is one tab stop with the platform's own
+            keyboard and touch handling, where twenty-six buttons are twenty-six tab stops. It
+            names the depth it is on, which the chips could only show by which was lit. */}
+        <label className="forecast-column-filter forecast-depth-choice">
+          depth{' '}
+          <select
+            aria-label="depth"
+            value={depthIndex}
+            onChange={(event) => setDepthIndex(Number(event.target.value))}
+          >
+            {grid.depthsM.map((depth, index) => (
+              <option key={depth} value={index}>
+                {depth.toFixed(0)} m
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+
+      {/* **The volume, and it is closed at rest.** It is this tab's only deck.gl surface and
+          that stack is about a third of the bundle, so `lazy.tsx` withholds it: opening Forecast
+          costs what it always cost and opening a volume costs what a volume costs. The control
+          is a chip like the others rather than a new vocabulary.
+
+          **And it sits with the other controls, because it had stopped being findable.** It was
+          at the foot of the region — after the map, the readout, the rays and the profile, 858px
+          down a 1,065px column and behind 34 chips, below the fold of a 1,000px window. That was
+          tolerable when the depth chooser was six chips; #113 took the depth axis to 26 and the
+          chooser to four rows of them, and a reader opening the Forecast tab then saw a heatmap
+          with no sign that a volume existed. Reported by a reader in those words.
+
+          Nothing measured it, and the two proofs that could have are both blind to it in the
+          same way: `capture:forecast` finds the control by its accessible name and clicks it,
+          which says nothing about where it is, and the narrow proof measures this region with
+          the volume closed. Reachability is not existence, and only existence was held.
+
+          The drawing moves with the control rather than staying at the foot, because a chip that
+          reveals something six hundred pixels below itself reads as a chip that did nothing. */}
+      <div className="forecast-column-filter" role="group" aria-label="the volume">
+        <button
+          type="button"
+          className={`forecast-chip${volumeOpen ? ' is-on' : ''}`}
+          aria-pressed={volumeOpen}
+          onClick={() => setVolumeOpen((open) => !open)}
+        >
+          {volumeOpen ? 'hide the volume' : 'show the volume'}
+        </button>
+        {volumeOpen && (
+          <label className="forecast-volume-parameter">
+            parameter{' '}
+            <select
+              value={volumeParameter}
+              onChange={(event) => setVolumeParameter(event.target.value as VolumeParameter)}
+            >
+              {VOLUME_PARAMETERS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      {volumeOpen && (
+        <Volume
+          collectionId={analysis.collections.analysis}
+          grid={grid}
+          edrPrefix={edrPrefix}
+          validator={validator}
+          parameter={volumeParameter}
+          // The column the region already has, and the same reader that opened it: T011 and T012
+          // both say the volume must not be a second selection, and this is what that means in
+          // code — one `readColumn`, one `column`, two drawings of them.
+          column={column}
+          onPickColumn={(longitude, latitude) => {
+            /*
+             * **The cursor moves with the column, or the two regions disagree about which one
+             * is open.** `Volume.tsx`'s header states the invariant — "a reader who picks in
+             * one and looks at the other must not find two different columns open" — and this
+             * was the one path into `column` that did not keep it: the share map's highlight
+             * and its readout are `cursor`-only, and clicking a square in the volume moved the
+             * rays, the profile, the numbers and the volume's own marker while leaving the
+             * square the reader picked *before* still lit, with its latitude and longitude
+             * printed underneath. Every other route sets it — a click through `onMouseEnter`,
+             * a keyboard Enter through the cursor itself — and this one had no reason not to.
+             *
+             * Outside the drawn window the cursor is cleared rather than snapped to the
+             * nearest edge: a snap would light a square the reader did not choose, which is
+             * the same fault one cell wide instead of a hundred kilometres.
+             */
+            const at = cursorAt(longitude, latitude);
+            setCursor(at);
+            void readColumn(longitude, latitude);
+          }}
+        />
+      )}
 
       {/* **A grid already read does not make the give-up sayable.** `gridGaveUp` was read in one
           place, inside `if (!analysis || !grid)`, so it could only ever be stated by a region that
@@ -1366,69 +1456,6 @@ export function ColumnProvenance({
         store.
       </p>
 
-      {/* **The volume, and it is closed at rest.** It is this tab's only deck.gl surface and
-          that stack is about a third of the bundle, so `lazy.tsx` withholds it: opening Forecast
-          costs what it always cost and opening a volume costs what a volume costs. The control
-          is a chip like the others rather than a new vocabulary. */}
-      <div className="forecast-column-filter" role="group" aria-label="the volume">
-        <button
-          type="button"
-          className={`forecast-chip${volumeOpen ? ' is-on' : ''}`}
-          aria-pressed={volumeOpen}
-          onClick={() => setVolumeOpen((open) => !open)}
-        >
-          {volumeOpen ? 'hide the volume' : 'show the volume'}
-        </button>
-        {volumeOpen && (
-          <label className="forecast-volume-parameter">
-            parameter{' '}
-            <select
-              value={volumeParameter}
-              onChange={(event) => setVolumeParameter(event.target.value as VolumeParameter)}
-            >
-              {VOLUME_PARAMETERS.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-
-      {volumeOpen && (
-        <Volume
-          collectionId={analysis.collections.analysis}
-          grid={grid}
-          edrPrefix={edrPrefix}
-          validator={validator}
-          parameter={volumeParameter}
-          // The column the region already has, and the same reader that opened it: T011 and T012
-          // both say the volume must not be a second selection, and this is what that means in
-          // code — one `readColumn`, one `column`, two drawings of them.
-          column={column}
-          onPickColumn={(longitude, latitude) => {
-            /*
-             * **The cursor moves with the column, or the two regions disagree about which one
-             * is open.** `Volume.tsx`'s header states the invariant — "a reader who picks in
-             * one and looks at the other must not find two different columns open" — and this
-             * was the one path into `column` that did not keep it: the share map's highlight
-             * and its readout are `cursor`-only, and clicking a square in the volume moved the
-             * rays, the profile, the numbers and the volume's own marker while leaving the
-             * square the reader picked *before* still lit, with its latitude and longitude
-             * printed underneath. Every other route sets it — a click through `onMouseEnter`,
-             * a keyboard Enter through the cursor itself — and this one had no reason not to.
-             *
-             * Outside the drawn window the cursor is cleared rather than snapped to the
-             * nearest edge: a snap would light a square the reader did not choose, which is
-             * the same fault one cell wide instead of a hundred kilometres.
-             */
-            const at = cursorAt(longitude, latitude);
-            setCursor(at);
-            void readColumn(longitude, latitude);
-          }}
-        />
-      )}
 
       {stillToCome}
     </div>
